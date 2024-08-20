@@ -1,0 +1,97 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import requests
+
+st.title('Gallicagram')
+
+# Mapping des titres de corpus vers leurs codes API
+corpus_mapping = {
+    "Le Monde (1944-2023)": "lemonde",
+    "Presse de Gallica (1789-1950)": "presse",
+    "Livres de Gallica (1600-1940)": "livres",
+    "Deutsches Zeitungsportal (DDB, 1780-1950)": "ddb",
+    "American Stories (1798-1963)": "american_stories",
+    "Journal de Paris (1777-1827)": "paris",
+    "Moniteur Universel (1789-1869)": "moniteur",
+    "Journal des Débats (1789-1944)": "journal_des_debats",
+    "La Presse (1836-1869)": "la_presse",
+    "Le Constitutionnel (1821-1913)": "constitutionnel",
+    "Le Figaro (1854-1952)": "figaro",
+    "Le Temps (1861-1942)": "temps",
+    "Le Petit Journal (1863-1942)": "petit_journal",
+    "Le Petit Parisien (1876-1944)": "petit_parisien",
+    "L’Humanité (1904-1952)": "huma",
+    "Opensubtitles (français, 1935-2020)": "subtitles",
+    "Opensubtitles (anglais, 1930-2020)": "subtitles_en",
+    "Rap (Genius, 1989-février 2024)": "rap",
+    "Persée (1789-2023)": "query_persee"
+}
+
+# Initialiser les valeurs dans st.session_state pour la recherche automatique
+if 'recherche_effectuee' not in st.session_state:
+    st.session_state.recherche_effectuee = False
+
+# Entrées dans la barre latérale
+termes_recherche = st.sidebar.text_area("Termes de recherche", "guerre, paix")
+# Utiliser des colonnes pour placer les champs d'année sur la même ligne
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    annee_debut = st.number_input("Début", min_value=1700, max_value=2023, value=1945)
+with col2:
+    annee_fin = st.number_input("Fin", min_value=1700, max_value=2023, value=2022)
+resolution = st.sidebar.selectbox("Résolution", ["Année", "Mois"])
+titre_corpus = st.sidebar.selectbox("Corpus", list(corpus_mapping.keys()))
+
+# Obtenir le code API correspondant au corpus sélectionné
+corpus = corpus_mapping[titre_corpus]
+
+# Fonction pour appeler l'API Gallicagram
+def obtenir_donnees_gallicagram(terme, debut, fin, resolution, corpus):
+    url = f"https://shiny.ens-paris-saclay.fr/guni/query?mot={terme}&corpus={corpus}&from={debut}&to={fin}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        donnees = pd.read_csv(url)
+        if resolution == 'année':
+            donnees_annee = donnees.groupby('annee')[['n', 'total']].sum().reset_index()
+            donnees_annee['ratio'] = donnees_annee['n'] / donnees_annee['total']
+            donnees_annee['date'] = pd.to_datetime(donnees_annee['annee'].astype(str) + '-01-01')
+            return donnees_annee
+        elif resolution == 'mois':
+            donnees['mois'] = donnees['mois'].astype(int).apply(lambda x: f'{x:02}')
+            donnees_mois = donnees.groupby(['annee','mois'])[['n', 'total']].sum().reset_index()
+            donnees_mois['ratio'] = donnees_mois['n'] / donnees_mois['total']
+            donnees_mois['date'] = pd.to_datetime(donnees_mois['annee'].astype(str) + '-' + donnees_mois['mois'] + '-01', format='%Y-%m-%d')
+            return donnees_mois
+    else:
+        st.error("Erreur lors de la récupération des données depuis l'API")
+        return None
+
+# Fonction pour lancer la recherche
+def lancer_recherche():
+    termes = [terme.strip() for terme in termes_recherche.split(',')]
+    if termes:
+        data_frames = []
+        for terme in termes:
+            donnees = obtenir_donnees_gallicagram(terme, annee_debut, annee_fin, resolution.lower(), corpus)
+            if donnees is not None:
+                donnees['terme'] = terme
+                data_frames.append(donnees)
+        if data_frames:
+            # Concaténer les DataFrames
+            toutes_donnees = pd.concat(data_frames)
+            # Afficher le graphique
+            fig = px.line(toutes_donnees, x='date', y='ratio', color='terme',
+                          labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
+            st.plotly_chart(fig)
+        else:
+            st.error("Aucune donnée disponible pour les termes recherchés.")
+
+# Lancer la recherche automatiquement à l'ouverture de l'application si ce n'est pas déjà fait
+if not st.session_state.recherche_effectuee:
+    lancer_recherche()
+    st.session_state.recherche_effectuee = True
+
+# Application principale - Ajout d'un bouton pour lancer la recherche manuellement
+if st.sidebar.button("Rechercher"):
+    lancer_recherche()
