@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import requests
+import base64
+import json
+
+st.set_page_config(page_title="Gallicagram")
 
 st.title('Gallicagram')
 
@@ -21,27 +25,53 @@ corpus_mapping = {
     "Le Temps (1861-1942)": "temps",
     "Le Petit Journal (1863-1942)": "petit_journal",
     "Le Petit Parisien (1876-1944)": "petit_parisien",
-    "L’Humanité (1904-1952)": "huma",
+    "L'Humanité (1904-1952)": "huma",
     "Opensubtitles (français, 1935-2020)": "subtitles",
     "Opensubtitles (anglais, 1930-2020)": "subtitles_en",
     "Rap (Genius, 1989-février 2024)": "rap",
     "Persée (1789-2023)": "query_persee"
 }
 
-# Initialiser les valeurs dans st.session_state pour la recherche automatique
-if 'recherche_effectuee' not in st.session_state:
-    st.session_state.recherche_effectuee = False
+# Fonctions pour encoder et décoder l'état
+def encode_state(state):
+    json_str = json.dumps(state)
+    return base64.urlsafe_b64encode(json_str.encode()).decode()
+
+def decode_state(encoded_state):
+    json_str = base64.urlsafe_b64decode(encoded_state.encode()).decode()
+    return json.loads(json_str)
+
+# Vérifier s'il y a un état dans l'URL
+if 'state' in st.experimental_get_query_params():
+    state = decode_state(st.experimental_get_query_params()['state'][0])
+else:
+    state = {
+        'termes_recherche': "guerre, paix",
+        'annee_debut': 1945,
+        'annee_fin': 2022,
+        'resolution': "Année",
+        'titre_corpus': "Le Monde (1944-2023)"
+    }
 
 # Entrées dans la barre latérale
-termes_recherche = st.sidebar.text_area("Termes de recherche", "guerre, paix")
-# Utiliser des colonnes pour placer les champs d'année sur la même ligne
+termes_recherche = st.sidebar.text_area("Termes de recherche", value=state['termes_recherche'])
 col1, col2 = st.sidebar.columns(2)
 with col1:
-    annee_debut = st.number_input("Début", min_value=1700, max_value=2023, value=1945)
+    annee_debut = st.number_input("Début", min_value=1700, max_value=2023, value=state['annee_debut'])
 with col2:
-    annee_fin = st.number_input("Fin", min_value=1700, max_value=2023, value=2022)
-resolution = st.sidebar.selectbox("Résolution", ["Année", "Mois"])
-titre_corpus = st.sidebar.selectbox("Corpus", list(corpus_mapping.keys()))
+    annee_fin = st.number_input("Fin", min_value=1700, max_value=2023, value=state['annee_fin'])
+resolution = st.sidebar.selectbox("Résolution", ["Année", "Mois"], index=["Année", "Mois"].index(state['resolution']))
+titre_corpus = st.sidebar.selectbox("Corpus", list(corpus_mapping.keys()), index=list(corpus_mapping.keys()).index(state['titre_corpus']))
+
+# Mettre à jour l'état et l'URL
+current_state = {
+    'termes_recherche': termes_recherche,
+    'annee_debut': annee_debut,
+    'annee_fin': annee_fin,
+    'resolution': resolution,
+    'titre_corpus': titre_corpus
+}
+st.experimental_set_query_params(state=encode_state(current_state))
 
 # Obtenir le code API correspondant au corpus sélectionné
 corpus = corpus_mapping[titre_corpus]
@@ -52,12 +82,12 @@ def obtenir_donnees_gallicagram(terme, debut, fin, resolution, corpus):
     response = requests.get(url)
     if response.status_code == 200:
         donnees = pd.read_csv(url)
-        if resolution == 'année':
+        if resolution.lower() == 'année':
             donnees_annee = donnees.groupby('annee')[['n', 'total']].sum().reset_index()
             donnees_annee['ratio'] = donnees_annee['n'] / donnees_annee['total']
             donnees_annee['date'] = pd.to_datetime(donnees_annee['annee'].astype(str) + '-01-01')
             return donnees_annee
-        elif resolution == 'mois':
+        elif resolution.lower() == 'mois':
             donnees['mois'] = donnees['mois'].astype(int).apply(lambda x: f'{x:02}')
             donnees_mois = donnees.groupby(['annee','mois'])[['n', 'total']].sum().reset_index()
             donnees_mois['ratio'] = donnees_mois['n'] / donnees_mois['total']
@@ -78,20 +108,16 @@ def lancer_recherche():
                 donnees['terme'] = terme
                 data_frames.append(donnees)
         if data_frames:
-            # Concaténer les DataFrames
             toutes_donnees = pd.concat(data_frames)
-            # Afficher le graphique
             fig = px.line(toutes_donnees, x='date', y='ratio', color='terme',
                           labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
             st.plotly_chart(fig)
         else:
             st.error("Aucune donnée disponible pour les termes recherchés.")
 
-# Lancer la recherche automatiquement à l'ouverture de l'application si ce n'est pas déjà fait
-if not st.session_state.recherche_effectuee:
-    lancer_recherche()
-    st.session_state.recherche_effectuee = True
+# Lancer la recherche automatiquement
+lancer_recherche()
 
-# Application principale - Ajout d'un bouton pour lancer la recherche manuellement
+# Ajouter un bouton pour lancer la recherche manuellement
 if st.sidebar.button("Rechercher"):
     lancer_recherche()
