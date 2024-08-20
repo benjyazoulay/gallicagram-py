@@ -115,7 +115,7 @@ def lancer_recherche():
             fig = px.line(toutes_donnees, x='date', y='ratio', color='terme',
                           labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
             fig.update_layout(legend=dict(orientation="h", yanchor="bottom",xanchor="right"))
-            st.plotly_chart(fig)
+            st.plotly_chart(fig,use_container_width=True)
         else:
             st.error("Aucune donnée disponible pour les termes recherchés.")
 
