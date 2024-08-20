@@ -97,7 +97,7 @@ def obtenir_donnees_gallicagram(terme, debut, fin, resolution, corpus):
         return None
 st.markdown("""
     <a href="https://gallicagram.streamlit.app/" target="_self">
-        <img src="(https://github.com/user-attachments/assets/58e05d4b-04de-45c7-8bbc-5e69e76ecfd4" alt="Gallicagram" style="width: 200px;"/>
+        <img src="https://github.com/user-attachments/assets/58e05d4b-04de-45c7-8bbc-5e69e76ecfd4" alt="Gallicagram" style="width: 200px;"/>
     </a>
     """, unsafe_allow_html=True)
 # Fonction pour lancer la recherche
