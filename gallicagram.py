@@ -113,9 +113,10 @@ def lancer_recherche():
         if data_frames:
             toutes_donnees = pd.concat(data_frames)
             fig = px.line(toutes_donnees, x='date', y='ratio', color='terme',
-                          labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
-            fig.update_layout(legend=dict(orientation="h", yanchor="bottom",xanchor="right"))
-            st.plotly_chart(fig,use_container_width=True)
+              labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
+            fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=0, xanchor="right", x=1),
+                  margin=dict(l=0, r=0, t=0, b=0))
+            st.plotly_chart(fig, use_container_width=True)
         else:
             st.error("Aucune donnée disponible pour les termes recherchés.")
 
