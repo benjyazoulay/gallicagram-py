@@ -7,7 +7,6 @@ import json
 
 st.set_page_config(page_title="Gallicagram")
 
-st.title('Gallicagram')
 
 # Mapping des titres de corpus vers leurs codes API
 corpus_mapping = {
@@ -96,7 +95,9 @@ def obtenir_donnees_gallicagram(terme, debut, fin, resolution, corpus):
     else:
         st.error("Erreur lors de la récupération des données depuis l'API")
         return None
-
+st.markdown("""
+    <h1> <a href="https://gallicagram.streamlit.app/" target="_self" style="color: inherit; text-decoration: none;">Gallicagram</a> </h1>
+    """, unsafe_allow_html=True)
 # Fonction pour lancer la recherche
 def lancer_recherche():
     termes = [terme.strip() for terme in termes_recherche.split(',')]
