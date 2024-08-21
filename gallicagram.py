@@ -143,7 +143,7 @@ def lancer_recherche():
                     xaxis_title=None,
                     yaxis_title=None,
                     legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
-                    margin=dict(l=0, r=0, t=0, b=40)
+                    margin=dict(l=0, r=0, t=0, b=60)
                 )
             else:
                 fig.update_layout(
