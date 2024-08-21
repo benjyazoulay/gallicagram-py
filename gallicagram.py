@@ -56,6 +56,19 @@ if ua_string and isinstance(ua_string, str):
 
 st.session_state.is_mobile = is_mobile
 
+# Injecter du CSS pour masquer le badge Streamlit
+hide_streamlit_badge = """
+    <style>
+    .viewerBadge_container__r5tak {
+        visibility: hidden;
+    }
+    .viewerBadge_container__r5tak a {
+        pointer-events: none;
+    }
+    </style>
+    """
+st.markdown(hide_streamlit_badge, unsafe_allow_html=True)
+
 # Fonction pour lire les cookies en Python
 def get_is_mobile_from_cookie():
     cookies = st.experimental_get_query_params()
