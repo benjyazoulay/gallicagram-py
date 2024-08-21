@@ -166,36 +166,38 @@ st.markdown("""
 plot_container = st.empty()
 # Fonction pour lancer la recherche
 def lancer_recherche():
-    termes = [terme.strip() for terme in termes_recherche.split(',')]
-    if termes:
-        data_frames = []
-        for terme in termes:
-            donnees = obtenir_donnees_gallicagram(terme, annee_debut, annee_fin, resolution.lower(), corpus)
-            if donnees is not None:
-                donnees['terme'] = terme
-                data_frames.append(donnees)
-        if data_frames:
-            toutes_donnees = pd.concat(data_frames)
-            fig = px.line(toutes_donnees, x='date', y='ratio', color='terme',
-                          labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
-            # Supprimer les titres des axes si on est sur mobile
-            if st.session_state.is_mobile:
-                fig.update_layout(
-                    xaxis_title=None,
-                    yaxis_title=None,
-                    legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
-                    margin=dict(l=0, r=0, t=0, b=60)
-                )
+    with st.spinner('Recherche en cours...'):
+        termes = [terme.strip() for terme in termes_recherche.split(',')]
+        if termes:
+            data_frames = []
+            for terme in termes:
+                donnees = obtenir_donnees_gallicagram(terme, annee_debut, annee_fin, resolution.lower(), corpus)
+                if donnees is not None:
+                    donnees['terme'] = terme
+                    data_frames.append(donnees)
+            if data_frames:
+                toutes_donnees = pd.concat(data_frames)
+                fig = px.line(toutes_donnees, x='date', y='ratio', color='terme',
+                              labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
+                # Supprimer les titres des axes si on est sur mobile
+                if st.session_state.is_mobile:
+                    fig.update_layout(
+                        xaxis_title=None,
+                        yaxis_title=None,
+                        legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
+                        margin=dict(l=0, r=0, t=0, b=60)
+                    )
+                else:
+                    fig.update_layout(
+                        legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
+                        margin=dict(l=0, r=0, t=0, b=40)
+                    )
+
+                # Utiliser un conteneur pour mettre à jour ou remplacer le graphique
+                plot_container.plotly_chart(fig, use_container_width=True)
             else:
-                fig.update_layout(
-                    legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
-                    margin=dict(l=0, r=0, t=0, b=40)
-                )
-            
-            # Utiliser un conteneur pour mettre à jour ou remplacer le graphique
-            plot_container.plotly_chart(fig, use_container_width=True)
-        else:
-            st.error("Aucune donnée disponible pour les termes recherchés.")
+                st.error("Aucune donnée disponible pour les termes recherchés.")
+
 
 # Lancer la recherche automatiquement
 lancer_recherche()
