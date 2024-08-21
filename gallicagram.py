@@ -158,6 +158,9 @@ st.markdown("""
         <img src="https://github.com/user-attachments/assets/58e05d4b-04de-45c7-8bbc-5e69e76ecfd4" alt="Gallicagram" style="width: 200px;"/>
     </a>
     """, unsafe_allow_html=True)
+
+
+plot_container = st.empty()
 # Fonction pour lancer la recherche
 def lancer_recherche():
     termes = [terme.strip() for terme in termes_recherche.split(',')]
@@ -187,7 +190,6 @@ def lancer_recherche():
                 )
             
             # Utiliser un conteneur pour mettre à jour ou remplacer le graphique
-            plot_container = st.empty()
             plot_container.plotly_chart(fig, use_container_width=True)
         else:
             st.error("Aucune donnée disponible pour les termes recherchés.")
