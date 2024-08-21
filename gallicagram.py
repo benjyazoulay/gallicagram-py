@@ -71,7 +71,7 @@ st.markdown(hide_streamlit_badge, unsafe_allow_html=True)
 
 # Fonction pour lire les cookies en Python
 def get_is_mobile_from_cookie():
-    cookies = st.experimental_get_query_params()
+    cookies = st.query_params()
     return cookies.get('is_mobile', ['false'])[0] == 'true'
 
 # Lire si c'est mobile à partir du cookie
@@ -111,8 +111,8 @@ def decode_state(encoded_state):
     return json.loads(json_str)
 
 # Vérifier s'il y a un état dans l'URL
-if 'state' in st.experimental_get_query_params():
-    state = decode_state(st.experimental_get_query_params()['state'][0])
+if 'state' in st.query_params():
+    state = decode_state(st.query_params()['state'][0])
 else:
     state = {
         'termes_recherche': "guerre, paix",
