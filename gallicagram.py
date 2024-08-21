@@ -140,7 +140,7 @@ current_state = {
     'resolution': resolution,
     'titre_corpus': titre_corpus
 }
-st.experimental_set_experimental_get_query_params(state=encode_state(current_state))
+st.experimental_set_query_params(state=encode_state(current_state))
 
 # Obtenir le code API correspondant au corpus sélectionné
 corpus = corpus_mapping[titre_corpus]
