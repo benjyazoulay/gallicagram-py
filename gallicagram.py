@@ -69,43 +69,6 @@ hide_streamlit_badge = """
     """
 st.markdown(hide_streamlit_badge, unsafe_allow_html=True)
 
-st.markdown("""
-    <style>
-    /* Wrapper for the sidebar toggle and logo */
-    .header-wrapper {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    /* Ensuring the toggle and logo are on the same line */
-    .header-wrapper img {
-        width: 200px;
-        margin-left: 10px;
-    }
-
-    /* Adjustments for mobile */
-    @media only screen and (max-width: 600px) {
-        .header-wrapper {
-            justify-content: flex-start;
-        }
-        .header-wrapper img {
-            width: 150px;
-            margin-left: 0;
-        }
-    }
-    </style>
-
-    <div class="header-wrapper">
-        <div class="stSidebar">
-            <!-- This section is automatically handled by Streamlit for sidebar -->
-        </div>
-        <a href="https://gallicagram.streamlit.app/" target="_self">
-            <img src="https://github.com/user-attachments/assets/58e05d4b-04de-45c7-8bbc-5e69e76ecfd4" alt="Gallicagram"/>
-        </a>
-    </div>
-    """, unsafe_allow_html=True)
-
 # Fonction pour lire les cookies en Python
 def get_is_mobile_from_cookie():
     cookies = st.experimental_get_query_params()
