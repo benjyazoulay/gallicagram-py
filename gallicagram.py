@@ -4,17 +4,17 @@ import plotly.express as px
 import requests
 import base64
 import json
+from streamlit_javascript import st_javascript
+from user_agents import parse
 
 st.set_page_config(page_title="Gallicagram", layout="wide", menu_items=None)
 
-st.markdown(
-    """
-    <script>
-    document.cookie = "is_mobile=" + (window.innerWidth <= 768) + "; path=/";
-    </script>
-    """,
-    unsafe_allow_html=True
-)
+# Détecter le type d'appareil
+ua_string = st_javascript("""window.navigator.userAgent;""")
+user_agent = parse(ua_string)
+st.session_state.is_mobile = not user_agent.is_pc  # Détermine si ce n'est pas un PC
+
+
 # Fonction pour lire les cookies en Python
 def get_is_mobile_from_cookie():
     cookies = st.experimental_get_query_params()
@@ -131,7 +131,7 @@ def lancer_recherche():
             fig = px.line(toutes_donnees, x='date', y='ratio', color='terme',
               labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
             # Supprimer les titres des axes si on est sur mobile
-            if is_mobile:
+            if st.session_state.is_mobile:
                 fig.update_layout(
                     xaxis_title=None,
                     yaxis_title=None,
