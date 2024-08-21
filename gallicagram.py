@@ -171,7 +171,7 @@ def lancer_recherche():
         if data_frames:
             toutes_donnees = pd.concat(data_frames)
             fig = px.line(toutes_donnees, x='date', y='ratio', color='terme',
-              labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
+                          labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
             # Supprimer les titres des axes si on est sur mobile
             if st.session_state.is_mobile:
                 fig.update_layout(
@@ -185,7 +185,10 @@ def lancer_recherche():
                     legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
                     margin=dict(l=0, r=0, t=0, b=40)
                 )
-            st.plotly_chart(fig, use_container_width=True)
+            
+            # Utiliser un conteneur pour mettre à jour ou remplacer le graphique
+            plot_container = st.empty()
+            plot_container.plotly_chart(fig, use_container_width=True)
         else:
             st.error("Aucune donnée disponible pour les termes recherchés.")
 
