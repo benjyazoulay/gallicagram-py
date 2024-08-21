@@ -21,29 +21,31 @@ hide_streamlit_style = """
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-# Injecter du CSS pour ajuster l'icône et le contenu en haut sur mobile
 st.markdown("""
     <style>
-    /* Centrer le contenu en haut de la page */
+    /* Supprimer l'espace en haut de la page */
     .main .block-container {
         padding-top: 0 !important;
+        margin-top: -20px !important; /* Ajustez cette valeur si nécessaire */
     }
 
     /* Style spécifique pour les mobiles */
     @media only screen and (max-width: 600px) {
         img {
             display: block;
-            margin-left: 0;
+            margin-left: auto;
             margin-right: auto;
             margin-top: 0 !important;
             padding-top: 0 !important;
         }
         .main .block-container {
-            padding-top: 10px !important;
+            padding-top: 0 !important;
+            margin-top: -20px !important; /* Ajustez cette valeur pour mobile si nécessaire */
         }
     }
     </style>
     """, unsafe_allow_html=True)
+
 
 # Détecter le type d'appareil
 ua_string = st_javascript("""window.navigator.userAgent;""")
