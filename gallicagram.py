@@ -146,8 +146,6 @@ def lancer_recherche():
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.error("Aucune donnée disponible pour les termes recherchés.")
-        else:
-            st.error("Aucune donnée disponible pour les termes recherchés.")
 
 # Lancer la recherche automatiquement
 lancer_recherche()
