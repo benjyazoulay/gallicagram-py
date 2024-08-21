@@ -5,8 +5,7 @@ import requests
 import base64
 import json
 
-st.set_page_config(page_title="Gallicagram")
-
+st.set_page_config(page_title="Gallicagram", layout="wide", menu_items=None)
 
 # Mapping des titres de corpus vers leurs codes API
 corpus_mapping = {
@@ -114,8 +113,7 @@ def lancer_recherche():
             toutes_donnees = pd.concat(data_frames)
             fig = px.line(toutes_donnees, x='date', y='ratio', color='terme',
               labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
-            fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=0, xanchor="right", x=1),
-                  margin=dict(l=0, r=0, t=0, b=0))
+            fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5), margin=dict(l=0, r=0, t=0, b=40))
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.error("Aucune donnée disponible pour les termes recherchés.")
