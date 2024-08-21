@@ -11,9 +11,16 @@ st.set_page_config(page_title="Gallicagram", layout="wide", menu_items=None)
 
 # Détecter le type d'appareil
 ua_string = st_javascript("""window.navigator.userAgent;""")
-user_agent = parse(ua_string)
-st.session_state.is_mobile = not user_agent.is_pc  # Détermine si ce n'est pas un PC
 
+# Initialiser la variable pour savoir si l'utilisateur est sur mobile
+is_mobile = False
+
+# Vérifier si ua_string est valide
+if ua_string and isinstance(ua_string, str):
+    user_agent = parse(ua_string)
+    is_mobile = not user_agent.is_pc
+
+st.session_state.is_mobile = is_mobile
 
 # Fonction pour lire les cookies en Python
 def get_is_mobile_from_cookie():
