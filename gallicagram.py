@@ -31,7 +31,7 @@ st.markdown("""
     @media only screen and (max-width: 600px) {
         img {
             display: block;
-            margin-left: auto;
+            margin-left: 0;
             margin-right: auto;
             margin-top: 0 !important;
             padding-top: 0 !important;
