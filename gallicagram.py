@@ -10,22 +10,18 @@ st.set_page_config(page_title="Gallicagram", layout="wide", menu_items=None)
 st.markdown(
     """
     <script>
-    function updateQueryParams() {
-        var isMobile = window.innerWidth <= 768;
-        var params = new URLSearchParams(window.location.search);
-        params.set("is_mobile", isMobile);
-        window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
-    }
-    window.addEventListener('resize', updateQueryParams);
-    updateQueryParams();
+    document.cookie = "is_mobile=" + (window.innerWidth <= 768) + "; path=/";
     </script>
     """,
     unsafe_allow_html=True
 )
+# Fonction pour lire les cookies en Python
+def get_is_mobile_from_cookie():
+    cookies = st.experimental_get_query_params()
+    return cookies.get('is_mobile', ['false'])[0] == 'true'
 
-# Récupérer les paramètres d'URL
-query_params = st.experimental_get_query_params()
-is_mobile = query_params.get("is_mobile", ["false"])[0] == "true"
+# Lire si c'est mobile à partir du cookie
+is_mobile = get_is_mobile_from_cookie()
 
 
 # Mapping des titres de corpus vers leurs codes API
@@ -148,6 +144,8 @@ def lancer_recherche():
                     margin=dict(l=0, r=0, t=0, b=40)
                 )
             st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.error("Aucune donnée disponible pour les termes recherchés.")
         else:
             st.error("Aucune donnée disponible pour les termes recherchés.")
 
