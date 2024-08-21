@@ -56,18 +56,14 @@ if ua_string and isinstance(ua_string, str):
 
 st.session_state.is_mobile = is_mobile
 
-hide_streamlit_badge = """
-    <style>
-    /* Masquer le badge Streamlit en ciblant la classe qui le contient */
-    [class*="viewerBadge_container"] {
-        visibility: hidden;
-    }
-    [class*="viewerBadge_container"] a {
-        pointer-events: none;
-    }
-    </style>
-    """
-st.markdown(hide_streamlit_badge, unsafe_allow_html=True)
+# Masquer le badge Streamlit
+st.markdown("""
+<style>
+footer {
+    visibility: hidden;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # Fonction pour lire les cookies en Python
 def get_is_mobile_from_cookie():
