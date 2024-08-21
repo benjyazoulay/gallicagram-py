@@ -6,7 +6,22 @@ import base64
 import json
 
 st.set_page_config(page_title="Gallicagram", layout="wide", menu_items=None)
-
+st.markdown(
+    """
+    <style>
+    .reportview-container .main .block-container {
+        padding-top: 0rem;
+        padding-right: 0rem;
+        padding-left: 0rem;
+        padding-bottom: 0rem;
+    }
+    .element-container {
+        padding: 0rem !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 # Mapping des titres de corpus vers leurs codes API
 corpus_mapping = {
     "Le Monde (1944-2023)": "lemonde",
