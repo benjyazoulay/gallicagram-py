@@ -4,4 +4,3 @@ plotly
 requests
 streamlit-javascript
 user-agents
-html
