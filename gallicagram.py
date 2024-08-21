@@ -6,22 +6,28 @@ import base64
 import json
 
 st.set_page_config(page_title="Gallicagram", layout="wide", menu_items=None)
+
 st.markdown(
     """
-    <style>
-    .reportview-container .main .block-container {
-        padding-top: 0rem;
-        padding-right: 0rem;
-        padding-left: 0rem;
-        padding-bottom: 0rem;
+    <script>
+    function updateQueryParams() {
+        var isMobile = window.innerWidth <= 768;
+        var params = new URLSearchParams(window.location.search);
+        params.set("is_mobile", isMobile);
+        window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
     }
-    .element-container {
-        padding: 0rem !important;
-    }
-    </style>
+    window.addEventListener('resize', updateQueryParams);
+    updateQueryParams();
+    </script>
     """,
     unsafe_allow_html=True
 )
+
+# Récupérer les paramètres d'URL
+query_params = st.experimental_get_query_params()
+is_mobile = query_params.get("is_mobile", ["false"])[0] == "true"
+
+
 # Mapping des titres de corpus vers leurs codes API
 corpus_mapping = {
     "Le Monde (1944-2023)": "lemonde",
@@ -128,7 +134,19 @@ def lancer_recherche():
             toutes_donnees = pd.concat(data_frames)
             fig = px.line(toutes_donnees, x='date', y='ratio', color='terme',
               labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
-            fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None), margin=dict(l=0, r=0, t=0, b=40))
+            # Supprimer les titres des axes si on est sur mobile
+            if is_mobile:
+                fig.update_layout(
+                    xaxis_title=None,
+                    yaxis_title=None,
+                    legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
+                    margin=dict(l=0, r=0, t=0, b=0)
+                )
+            else:
+                fig.update_layout(
+                    legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
+                    margin=dict(l=0, r=0, t=0, b=40)
+                )
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.error("Aucune donnée disponible pour les termes recherchés.")
