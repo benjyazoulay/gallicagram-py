@@ -7,6 +7,7 @@ import json
 from streamlit_javascript import st_javascript
 from user_agents import parse
 import html
+import requests.utils
 
 st.set_page_config(page_title="Gallicagram", layout="wide", menu_items=None)
 
@@ -136,7 +137,7 @@ corpus = corpus_mapping[titre_corpus]
 
 # Fonction pour appeler l'API Gallicagram
 def obtenir_donnees_gallicagram(terme, debut, fin, resolution, corpus):
-    terme_encode = html.escape(terme)  # Encode le terme en HTML
+    terme_encode = requests.utils.quote(terme)
     url = f"https://shiny.ens-paris-saclay.fr/guni/query?mot={terme_encode}&corpus={corpus}&from={debut}&to={fin}"
     response = requests.get(url)
     if response.status_code == 200:
