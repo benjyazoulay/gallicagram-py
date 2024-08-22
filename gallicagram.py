@@ -166,6 +166,11 @@ st.markdown("""
 
 
 plot_container = st.empty()
+
+# Initialiser le compteur dans st.session_state
+if "search_count" not in st.session_state:
+    st.session_state.search_count = 0
+
 # Fonction pour lancer la recherche
 def lancer_recherche():
     with st.spinner('Recherche en cours...'):
@@ -182,7 +187,6 @@ def lancer_recherche():
                         if donnees_sommees is None:
                             donnees_sommees = donnees[['date', 'ratio']].copy()
                         else:
-                            # Additionner directement les ratios
                             donnees_sommees['ratio'] += donnees['ratio']
 
                 if donnees_sommees is not None:
@@ -213,10 +217,12 @@ def lancer_recherche():
             else:
                 st.error("Aucune donnée disponible pour les termes recherchés.")
 
-
-# Lancer la recherche automatiquement
-lancer_recherche()
+# Lancer la recherche automatiquement au premier chargement
+if st.session_state.search_count == 0:
+    lancer_recherche()
 
 # Ajouter un bouton pour lancer la recherche manuellement
 if st.sidebar.button("Rechercher"):
+    st.session_state.search_count += 1
     lancer_recherche()
+
