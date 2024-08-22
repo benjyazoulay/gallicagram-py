@@ -169,17 +169,30 @@ plot_container = st.empty()
 # Fonction pour lancer la recherche
 def lancer_recherche():
     with st.spinner('Recherche en cours...'):
-        termes = [terme.strip() for terme in termes_recherche.split(',')]
-        if termes:
+        termes_groupes = [group.strip() for group in termes_recherche.split(',')]
+        if termes_groupes:
             data_frames = []
-            for terme in termes:
-                donnees = obtenir_donnees_gallicagram(terme, annee_debut, annee_fin, resolution.lower(), corpus)
-                if donnees is not None:
-                    donnees['terme'] = terme
-                    data_frames.append(donnees)
+            for groupe in termes_groupes:
+                termes = [terme.strip() for terme in groupe.split('+')]
+                donnees_sommees = None
+                for terme in termes:
+                    donnees = obtenir_donnees_gallicagram(terme, annee_debut, annee_fin, resolution.lower(), corpus)
+                    if donnees is not None:
+                        if donnees_sommees is None:
+                            donnees_sommees = donnees.copy()
+                        else:
+                            # Additionner les fréquences (n) et les totaux
+                            donnees_sommees['n'] += donnees['n']
+                            donnees_sommees['total'] += donnees['total']
+
+                if donnees_sommees is not None:
+                    donnees_sommees['terme'] = '+'.join(termes)  # Nommer la courbe avec tous les termes combinés
+                    donnees_sommees['ratio'] = donnees_sommees['n'] / donnees_sommees['total']  # Recalculer le ratio
+                    data_frames.append(donnees_sommees)
+
             if data_frames:
                 toutes_donnees = pd.concat(data_frames)
-                fig = px.line(toutes_donnees, x='date', y='ratio', color='terme', line_shape = 'spline',
+                fig = px.line(toutes_donnees, x='date', y='ratio', color='terme', line_shape='spline',
                               labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
                 # Supprimer les titres des axes si on est sur mobile
                 if st.session_state.is_mobile:
@@ -199,7 +212,6 @@ def lancer_recherche():
                 plot_container.plotly_chart(fig, use_container_width=True)
             else:
                 st.error("Aucune donnée disponible pour les termes recherchés.")
-
 
 # Lancer la recherche automatiquement
 lancer_recherche()
