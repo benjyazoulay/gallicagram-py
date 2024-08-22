@@ -179,7 +179,7 @@ def lancer_recherche():
                     data_frames.append(donnees)
             if data_frames:
                 toutes_donnees = pd.concat(data_frames)
-                fig = px.line(toutes_donnees, x='date', y='ratio', color='terme', line_shape = 'spline",
+                fig = px.line(toutes_donnees, x='date', y='ratio', color='terme', line_shape = 'spline',
                               labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
                 # Supprimer les titres des axes si on est sur mobile
                 if st.session_state.is_mobile:
