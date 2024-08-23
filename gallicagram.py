@@ -31,13 +31,12 @@ def inject_javascript(js_code: str):
 
 # Inject JavaScript to hide elements in an iframe
 inject_javascript("""
-    if (window.self !== window.top) {
-        // This means the site is embedded in an iframe
-        const elements = document.querySelectorAll('[class*="embeddedAppMetaInfoBar_container"]');
-        if (element) {
-            element.style.display = 'none';
-        }
+    // This means the site is embedded in an iframe
+    const elements = document.querySelectorAll('[class*="embeddedAppMetaInfoBar_container"]');
+    if (element) {
+        element.style.display = 'none';
     }
+
 """)
 
 # Injecter du CSS pour masquer la barre par défaut de Streamlit
