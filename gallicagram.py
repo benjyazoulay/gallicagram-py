@@ -33,7 +33,7 @@ def inject_javascript(js_code: str):
 inject_javascript("""
     if (window.self !== window.top) {
         // This means the site is embedded in an iframe
-        const element = document.querySelector('.embeddedAppMetaInfoBar_container');
+        const elements = document.querySelectorAll('[class*="embeddedAppMetaInfoBar_container"]');
         if (element) {
             element.style.display = 'none';
         }
