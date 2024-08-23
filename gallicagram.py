@@ -8,36 +8,8 @@ from streamlit_javascript import st_javascript
 from user_agents import parse
 import html
 import requests.utils
-import streamlit.components.v1 as components  # Import the components API for custom HTML
-
 
 st.set_page_config(page_title="Gallicagram", layout="wide", menu_items=None)
-
-# Function to inject JavaScript into the Streamlit app
-def inject_javascript(js_code: str):
-    """
-    Function to inject JavaScript into the Streamlit app.
-    :param js_code: JavaScript code as a string.
-    """
-    components.html(
-        f"""
-        <script>
-        {js_code}
-        </script>
-        """,
-        height=0,  # Set to 0 height as it's only for running JS and not displaying anything
-        width=0
-    )
-
-# Inject JavaScript to hide elements in an iframe
-inject_javascript("""
-    // This means the site is embedded in an iframe
-    const elements = document.querySelectorAll('[class*="embeddedAppMetaInfoBar_container"]');
-    if (element) {
-        element.style.display = 'none';
-    }
-
-""")
 
 # Injecter du CSS pour masquer la barre par défaut de Streamlit
 hide_streamlit_style = """
