@@ -75,6 +75,10 @@ corpus_mapping = {
     "Le Monde (1944-2023)": "lemonde",
     "Presse de Gallica (1789-1950)": "presse",
     "Livres de Gallica (1600-1940)": "livres",
+    "Opensubtitles (français, 1935-2020)": "subtitles",
+    "Opensubtitles (anglais, 1930-2020)": "subtitles_en",
+    "Rap (Genius, 1989-février 2024)": "rap",
+    "Persée (1789-2023)": "query_persee",
     "Deutsches Zeitungsportal (DDB, 1780-1950)": "ddb",
     "American Stories (1798-1963)": "american_stories",
     "Journal de Paris (1777-1827)": "paris",
@@ -86,11 +90,7 @@ corpus_mapping = {
     "Le Temps (1861-1942)": "temps",
     "Le Petit Journal (1863-1942)": "petit_journal",
     "Le Petit Parisien (1876-1944)": "petit_parisien",
-    "L'Humanité (1904-1952)": "huma",
-    "Opensubtitles (français, 1935-2020)": "subtitles",
-    "Opensubtitles (anglais, 1930-2020)": "subtitles_en",
-    "Rap (Genius, 1989-février 2024)": "rap",
-    "Persée (1789-2023)": "query_persee"
+    "L'Humanité (1904-1952)": "huma"
 }
 
 # Fonctions pour encoder et décoder l'état
@@ -143,6 +143,7 @@ def obtenir_donnees_gallicagram(terme, debut, fin, resolution, corpus):
     url = f"https://shiny.ens-paris-saclay.fr/guni/query?mot={terme_encode}&corpus={corpus}&from={debut}&to={fin}"
     if corpus == "query_persee" :
         url = f"https://shiny.ens-paris-saclay.fr/guni/query_persee?mot={terme_encode}&from={debut}&to={fin}"
+    print(url)
     response = requests.get(url)
     if response.status_code == 200:
         donnees = pd.read_csv(url)
@@ -173,7 +174,13 @@ plot_container = st.empty()
 if "search_count" not in st.session_state:
     st.session_state.search_count = 0
 
-# Fonction pour lancer la recherche
+# Ajoutez ces lignes pour initialiser l'état de session
+if 'graph_data' not in st.session_state:
+    st.session_state.graph_data = None
+if 'last_search_params' not in st.session_state:
+    st.session_state.last_search_params = None
+
+# Modifiez la fonction lancer_recherche pour stocker les données dans l'état de session
 def lancer_recherche():
     with st.spinner('Recherche en cours...'):
         termes_groupes = [groupe.strip() for groupe in termes_recherche.split(',')]
@@ -192,39 +199,63 @@ def lancer_recherche():
                             donnees_sommees['ratio'] += donnees['ratio']
 
                 if donnees_sommees is not None:
-                    donnees_sommees['terme'] = '+'.join(termes)  # Nommer la courbe avec tous les termes combinés
+                    donnees_sommees['terme'] = '+'.join(termes)
                     data_frames.append(donnees_sommees)
 
             if data_frames:
                 toutes_donnees = pd.concat(data_frames)
-                fig = px.line(toutes_donnees, x='date', y='ratio', color='terme', line_shape='spline',
-                              labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
-                
-                # Supprimer les titres des axes si on est sur mobile
-                if st.session_state.is_mobile:
-                    fig.update_layout(
-                        xaxis_title=None,
-                        yaxis_title=None,
-                        legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
-                        margin=dict(l=0, r=0, t=0, b=60)
-                    )
-                else:
-                    fig.update_layout(
-                        legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
-                        margin=dict(l=0, r=0, t=0, b=40)
-                    )
-
-                # Utiliser un conteneur pour mettre à jour ou remplacer le graphique
-                plot_container.plotly_chart(fig, use_container_width=True)
+                st.session_state.graph_data = toutes_donnees
+                st.session_state.last_search_params = {
+                    'termes_recherche': termes_recherche,
+                    'annee_debut': annee_debut,
+                    'annee_fin': annee_fin,
+                    'resolution': resolution,
+                    'titre_corpus': titre_corpus
+                }
             else:
                 st.error("Aucune donnée disponible pour les termes recherchés.")
 
-# Lancer la recherche automatiquement au premier chargement
-if st.session_state.search_count == 0:
-    lancer_recherche()
+# Fonction pour afficher le graphique
+def afficher_graphique():
+    if st.session_state.graph_data is not None:
+        fig = px.line(st.session_state.graph_data, x='date', y='ratio', color='terme', line_shape='spline',
+                      labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'})
+        
+        if st.session_state.is_mobile:
+            fig.update_layout(
+                xaxis_title=None,
+                yaxis_title=None,
+                legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
+                margin=dict(l=0, r=0, t=0, b=60)
+            )
+        else:
+            fig.update_layout(
+                legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
+                margin=dict(l=0, r=0, t=0, b=40)
+            )
 
-# Ajouter un bouton pour lancer la recherche manuellement
-if st.sidebar.button("Rechercher"):
+        plot_container.plotly_chart(fig, use_container_width=True)
+
+if 'search_performed' not in st.session_state:
+    st.session_state.search_performed = False
+
+# Remplacez la partie du code qui gère le bouton de recherche par ceci:
+if st.sidebar.button("Rechercher") or not st.session_state.search_performed:
     st.session_state.search_count += 1
     lancer_recherche()
+    st.session_state.search_performed = True
 
+# Affichez toujours le graphique s'il existe des données
+afficher_graphique()
+
+# Ajoutez un avertissement si les paramètres ont changé depuis la dernière recherche
+if st.session_state.last_search_params:
+    current_params = {
+        'termes_recherche': termes_recherche,
+        'annee_debut': annee_debut,
+        'annee_fin': annee_fin,
+        'resolution': resolution,
+        'titre_corpus': titre_corpus
+    }
+    if current_params != st.session_state.last_search_params:
+        st.warning("Cliquez sur 'Rechercher' pour mettre à jour le graphique.")
