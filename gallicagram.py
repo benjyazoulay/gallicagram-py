@@ -17,6 +17,26 @@ hide_streamlit_style = """
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    /* Nouveau CSS pour créer l'overlay */
+    body::after {
+        content: '';
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        width: 150px;  /* Ajustez selon la largeur du badge */
+        height: 50px;  /* Ajustez selon la hauteur du badge */
+        background-color: white;
+        z-index: 1000000;  /* Assurez-vous que c'est une valeur élevée */
+        pointer-events: none;  /* Permet les clics à travers l'overlay */
+    }
+
+    /* Ajustements pour le mobile si nécessaire */
+    @media only screen and (max-width: 600px) {
+        body::after {
+            width: 100px;  /* Ajustez si nécessaire pour mobile */
+            height: 40px;  /* Ajustez si nécessaire pour mobile */
+        }
+    }
     </style>
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
