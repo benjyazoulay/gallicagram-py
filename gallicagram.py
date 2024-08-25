@@ -17,6 +17,14 @@ hide_streamlit_style = """
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    
+    .stApp {
+        overflow: hidden;
+    }
+    .main .block-container {
+        padding-bottom: 5rem;
+        overflow: hidden;
+    }
     </style>
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
