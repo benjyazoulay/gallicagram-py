@@ -114,7 +114,15 @@ else:
         'titre_corpus': "Le Monde (1944-2023)"
     }
 
-
+sidebar_header_style = """
+        <style>
+        [data-testid="stSidebarHeader"] {
+            padding: 0px !important; /* Réduire le padding à zéro */
+            margin-bottom: -50px !important; /* Ajuster la marge en bas pour réduire la hauteur */
+        }
+        </style>
+        """
+    st.markdown(sidebar_header_style, unsafe_allow_html=True)
 # Entrées dans la barre latérale
 termes_recherche = st.sidebar.text_area("Termes de recherche", value=state['termes_recherche'])
 col1, col2 = st.sidebar.columns(2)
