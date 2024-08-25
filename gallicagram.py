@@ -114,6 +114,55 @@ else:
         'titre_corpus': "Le Monde (1944-2023)"
     }
 
+
+# Ajouter un bouton pour le mode sombre en haut de la page
+dark_mode = st.sidebar.button("🌙 Dark Mode" if not st.session_state.get('dark_mode', False) else "☀️ Light Mode")
+
+# Basculer le mode sombre lorsque le bouton est cliqué
+if dark_mode:
+    st.session_state.dark_mode = not st.session_state.get('dark_mode', False)
+# Appliquer le mode sombre si activé
+if st.session_state.get('dark_mode', False):
+    dark_mode_style = """
+    <style>
+    body {
+        background-color: #121212;
+        color: #e0e0e0;
+    }
+    .sidebar .sidebar-content {
+        background-color: #2c2c2c;
+    }
+    .css-1d391kg {
+        color: #e0e0e0;
+    }
+    .stButton>button {
+        color: #000000;
+        background-color: #ffffff;
+    }
+    </style>
+    """
+    st.markdown(dark_mode_style, unsafe_allow_html=True)
+else:
+    light_mode_style = """
+    <style>
+    body {
+        background-color: #ffffff;
+        color: #000000;
+    }
+    .sidebar .sidebar-content {
+        background-color: #f8f9fa;
+    }
+    .css-1d391kg {
+        color: #000000;
+    }
+    .stButton>button {
+        color: #ffffff;
+        background-color: #000000;
+    }
+    </style>
+    """
+    st.markdown(light_mode_style, unsafe_allow_html=True)
+
 # Entrées dans la barre latérale
 termes_recherche = st.sidebar.text_area("Termes de recherche", value=state['termes_recherche'])
 col1, col2 = st.sidebar.columns(2)
