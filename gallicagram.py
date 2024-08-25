@@ -122,7 +122,7 @@ sidebar_header_style = """
         }
         </style>
         """
-    st.markdown(sidebar_header_style, unsafe_allow_html=True)
+st.markdown(sidebar_header_style, unsafe_allow_html=True)
 # Entrées dans la barre latérale
 termes_recherche = st.sidebar.text_area("Termes de recherche", value=state['termes_recherche'])
 col1, col2 = st.sidebar.columns(2)
