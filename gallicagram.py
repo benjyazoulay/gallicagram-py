@@ -226,12 +226,14 @@ def afficher_graphique():
                 xaxis_title=None,
                 yaxis_title=None,
                 legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
-                margin=dict(l=0, r=0, t=0, b=60)
+                margin=dict(l=0, r=0, t=0, b=60),
+                color_discrete_sequence=px.colors.qualitative.Set1  # Ajoutez cette ligne
             )
         else:
             fig.update_layout(
                 legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
-                margin=dict(l=0, r=0, t=0, b=40)
+                margin=dict(l=0, r=0, t=0, b=40),
+                color_discrete_sequence=px.colors.qualitative.Set1  # Ajoutez cette ligne
             )
 
         plot_container.plotly_chart(fig, use_container_width=True)
