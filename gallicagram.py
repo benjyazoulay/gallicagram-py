@@ -9,7 +9,7 @@ from user_agents import parse
 import html
 import requests.utils
 
-st.set_page_config(page_title="Gallicagram", page_icon="https://github.com/user-attachments/assets/e376bdba-3b42-43d2-ba7e-0b2d6845aa09", layout="wide", menu_items=None)
+st.set_page_config(page_title="Gallicagram", page_icon="https://github.com/user-attachments/assets/6011b645-fba6-4e16-9f39-d54add706fa2", layout="wide", menu_items=None)
 
 # Injecter du CSS pour masquer la barre par défaut de Streamlit
 hide_streamlit_style = """
