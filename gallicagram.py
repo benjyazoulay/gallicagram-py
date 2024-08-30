@@ -72,7 +72,7 @@ is_mobile = get_is_mobile_from_cookie()
 
 # Mapping des titres de corpus vers leurs codes API
 corpus_mapping = {
-    "Le Monde (1944-2023)": "lemonde",
+    "Le Monde (1944-2023)": "lemonde_rubriques",
     "Presse de Gallica (1789-1950)": "presse",
     "Livres de Gallica (1600-1940)": "livres",
     "Opensubtitles (français, 1935-2020)": "subtitles",
@@ -127,9 +127,9 @@ st.markdown(sidebar_header_style, unsafe_allow_html=True)
 termes_recherche = st.sidebar.text_area("Termes de recherche", value=state['termes_recherche'])
 col1, col2 = st.sidebar.columns(2)
 with col1:
-    annee_debut = st.number_input("Début", min_value=1700, max_value=2023, value=state['annee_debut'])
+    annee_debut = st.number_input("Début", min_value=1700, max_value=2024, value=state['annee_debut'])
 with col2:
-    annee_fin = st.number_input("Fin", min_value=1700, max_value=2023, value=state['annee_fin'])
+    annee_fin = st.number_input("Fin", min_value=1700, max_value=2024, value=state['annee_fin'])
 resolution = st.sidebar.selectbox("Résolution", ["Année", "Mois"], index=["Année", "Mois"].index(state['resolution']))
 titre_corpus = st.sidebar.selectbox("Corpus", list(corpus_mapping.keys()), index=list(corpus_mapping.keys()).index(state['titre_corpus']))
 
