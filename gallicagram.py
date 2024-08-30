@@ -8,6 +8,7 @@ from streamlit_javascript import st_javascript
 from user_agents import parse
 import html
 import requests.utils
+import pyperclip
 
 st.set_page_config(page_title="Gallicagram", page_icon="https://github.com/user-attachments/assets/6011b645-fba6-4e16-9f39-d54add706fa2", layout="wide", menu_items=None)
 
@@ -69,6 +70,14 @@ def get_is_mobile_from_cookie():
 # Lire si c'est mobile à partir du cookie
 is_mobile = get_is_mobile_from_cookie()
 
+
+def generate_share_url():
+    base_url = st.experimental_get_query_params().get('state', [''])[0]
+    return f"https://gallicagram.streamlit.app/?state={base_url}"
+def share_url():
+    share_url = generate_share_url()
+    pyperclip.copy(share_url)
+    st.success("URL copiée dans le presse-papiers !")
 
 # Mapping des titres de corpus vers leurs codes API
 corpus_mapping = {
@@ -249,11 +258,17 @@ def afficher_graphique():
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# Remplacez la partie du code qui gère le bouton de recherche par ceci:
-if st.sidebar.button("Rechercher") or not st.session_state.search_performed:
-    st.session_state.search_count += 1
-    lancer_recherche()
-    st.session_state.search_performed = True
+col1, col2 = st.sidebar.columns(2)
+
+with col1:
+    if st.button("🔎Rechercher") or not st.session_state.search_performed:
+        st.session_state.search_count += 1
+        lancer_recherche()
+        st.session_state.search_performed = True
+
+with col2:
+    if st.button("📤Partager", key="share_button"):
+        share_url()
 
 # Affichez toujours le graphique s'il existe des données
 afficher_graphique()
