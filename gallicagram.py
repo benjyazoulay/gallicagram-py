@@ -310,7 +310,6 @@ if is_default_params() and not st.session_state.search_performed:
         offline_data = load_offline_data(annee_debut, annee_fin, resolution)
         st.session_state.graph_data = offline_data
         afficher_graphique()
-        st.info("Données chargées hors ligne pour les paramètres par défaut.")
     else:
         st.warning("Fichiers de données hors ligne non trouvés. Utilisez le bouton 'Rechercher' pour obtenir les données en ligne.")
 
