@@ -202,7 +202,7 @@ corpus = corpus_mapping[titre_corpus]
 
 # Fonction pour appeler l'API Gallicagram
 def obtenir_donnees_gallicagram(terme, debut, fin, resolution, corpus):
-    terme_encode = requests.utils.quote(terme)
+    terme_encode = requests.utils.quote(terme).lower()
     url = f"https://shiny.ens-paris-saclay.fr/guni/query?mot={terme_encode}&corpus={corpus}&from={debut}&to={fin}"
     if corpus == "query_persee" :
         url = f"https://shiny.ens-paris-saclay.fr/guni/query_persee?mot={terme_encode}&from={debut}&to={fin}"
