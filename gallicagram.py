@@ -224,11 +224,23 @@ def obtenir_donnees_gallicagram(terme, debut, fin, resolution, corpus):
     else:
         st.error("Erreur lors de la récupération des données depuis l'API")
         return None
-st.markdown("""
-    <a href="https://gallicagram.com/" target="_self">
-        <img src="https://github.com/user-attachments/assets/58e05d4b-04de-45c7-8bbc-5e69e76ecfd4" alt="Gallicagram" style="width: 200px;"/>
-    </a>
-    """, unsafe_allow_html=True)
+def get_base64_of_bin_file(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+def get_img_with_href(local_img_path, target_url):
+    img_format = os.path.splitext(local_img_path)[-1].replace('.', '')
+    bin_str = get_base64_of_bin_file(local_img_path)
+    html_code = f'''
+        <a href="{target_url}" target="_self">
+            <img src="data:image/{img_format};base64,{bin_str}" alt="Gallicagram" style="width: 200px;"/>
+        </a>'''
+    return html_code
+
+# Utilisation de la fonction
+logo_html = get_img_with_href('logo_gallicagram.png', 'https://gallicagram.com/')
+st.markdown(logo_html, unsafe_allow_html=True)
 
 
 plot_container = st.empty()
