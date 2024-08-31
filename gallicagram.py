@@ -117,7 +117,7 @@ else:
     state = {
         'termes_recherche': "guerre, paix",
         'annee_debut': 1945,
-        'annee_fin': 2022,
+        'annee_fin': 2024,
         'resolution': "Année",
         'titre_corpus': "Le Monde (1944-2023)"
     }
