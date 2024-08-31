@@ -8,6 +8,7 @@ from streamlit_javascript import st_javascript
 from user_agents import parse
 import html
 import requests.utils
+import os
 
 st.set_page_config(page_title="Gallicagram", page_icon="https://github.com/user-attachments/assets/6011b645-fba6-4e16-9f39-d54add706fa2", layout="wide", menu_items=None)
 
@@ -110,17 +111,62 @@ def decode_state(encoded_state):
     json_str = base64.urlsafe_b64decode(encoded_state.encode()).decode()
     return json.loads(json_str)
 
+# Définir l'état par défaut
+default_state = {
+    'termes_recherche': "guerre, paix",
+    'annee_debut': 1945,
+    'annee_fin': 2024,
+    'resolution': "Année",
+    'titre_corpus': "Le Monde (1944-2024)"
+}
+
 # Vérifier s'il y a un état dans l'URL
 if 'state' in st.experimental_get_query_params():
     state = decode_state(st.experimental_get_query_params()['state'][0])
 else:
-    state = {
-        'termes_recherche': "guerre, paix",
-        'annee_debut': 1945,
-        'annee_fin': 2024,
-        'resolution': "Année",
-        'titre_corpus': "Le Monde (1944-2024)"
-    }
+    state = default_state.copy()
+
+def load_offline_data(debut, fin, resolution):
+    guerre_df = pd.read_csv('guerre.csv')
+    paix_df = pd.read_csv('paix.csv')
+    
+    # Filtrer les données selon la plage de dates spécifiée
+    guerre_df = guerre_df[(guerre_df['annee'] >= debut) & (guerre_df['annee'] <= fin)]
+    paix_df = paix_df[(paix_df['annee'] >= debut) & (paix_df['annee'] <= fin)]
+    
+    # Appliquer le même traitement que dans obtenir_donnees_gallicagram
+    if resolution.lower() == 'année':
+        guerre_df = guerre_df.groupby('annee')[['n', 'total']].sum().reset_index()
+        paix_df = paix_df.groupby('annee')[['n', 'total']].sum().reset_index()
+        
+        guerre_df['ratio'] = guerre_df['n'] / guerre_df['total']
+        paix_df['ratio'] = paix_df['n'] / paix_df['total']
+        
+        guerre_df['date'] = pd.to_datetime(guerre_df['annee'].astype(str) + '-01-01')
+        paix_df['date'] = pd.to_datetime(paix_df['annee'].astype(str) + '-01-01')
+    elif resolution.lower() == 'mois':
+        guerre_df['mois'] = guerre_df['mois'].astype(int).apply(lambda x: f'{x:02}')
+        paix_df['mois'] = paix_df['mois'].astype(int).apply(lambda x: f'{x:02}')
+        
+        guerre_df['date'] = pd.to_datetime(guerre_df['annee'].astype(str) + '-' + guerre_df['mois'] + '-01', format='%Y-%m-%d')
+        paix_df['date'] = pd.to_datetime(paix_df['annee'].astype(str) + '-' + paix_df['mois'] + '-01', format='%Y-%m-%d')
+        
+        guerre_df['ratio'] = guerre_df['n'] / guerre_df['total']
+        paix_df['ratio'] = paix_df['n'] / paix_df['total']
+    
+    guerre_df['terme'] = 'guerre'
+    paix_df['terme'] = 'paix'
+    
+    all_data = pd.concat([guerre_df, paix_df])
+    return all_data[['date', 'ratio', 'terme']]
+
+# Vérifier si les paramètres actuels correspondent aux paramètres par défaut
+def is_default_params():
+    return (termes_recherche == default_state['termes_recherche'] and
+            annee_debut == default_state['annee_debut'] and
+            annee_fin == default_state['annee_fin'] and
+            resolution == default_state['resolution'] and
+            titre_corpus == default_state['titre_corpus'])
 
 sidebar_header_style = """
         <style>
@@ -254,8 +300,19 @@ def afficher_graphique():
 
         plot_container.plotly_chart(fig, use_container_width=True)
 
+# Logique principale
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
+
+if is_default_params() and not st.session_state.search_performed:
+    # Charger et afficher les données hors ligne si les paramètres sont par défaut
+    if os.path.exists('guerre.csv') and os.path.exists('paix.csv'):
+        offline_data = load_offline_data(annee_debut, annee_fin, resolution)
+        st.session_state.graph_data = offline_data
+        afficher_graphique()
+        st.info("Données chargées hors ligne pour les paramètres par défaut.")
+    else:
+        st.warning("Fichiers de données hors ligne non trouvés. Utilisez le bouton 'Rechercher' pour obtenir les données en ligne.")
 
 col1, col2 = st.sidebar.columns(2)
 
