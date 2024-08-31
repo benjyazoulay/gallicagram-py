@@ -76,8 +76,7 @@ def generate_share_url():
     return f"https://gallicagram.streamlit.app/?state={base_url}"
 def share_url():
     share_url = generate_share_url()
-    st.text_input("URL de partage :", value=share_url, key="share_url_input")
-    st.info("Copiez l'URL ci-dessus pour la partager.")
+    st.code(share_url, language="python")
 
 # Mapping des titres de corpus vers leurs codes API
 corpus_mapping = {
