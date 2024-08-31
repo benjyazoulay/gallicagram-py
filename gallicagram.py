@@ -80,7 +80,7 @@ def share_url():
 
 # Mapping des titres de corpus vers leurs codes API
 corpus_mapping = {
-    "Le Monde (1944-2023)": "lemonde_rubriques",
+    "Le Monde (1944-2024)": "lemonde_rubriques",
     "Presse de Gallica (1789-1950)": "presse",
     "Livres de Gallica (1600-1940)": "livres",
     "Opensubtitles (français, 1935-2020)": "subtitles",
