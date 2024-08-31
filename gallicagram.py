@@ -119,7 +119,7 @@ else:
         'annee_debut': 1945,
         'annee_fin': 2024,
         'resolution': "Année",
-        'titre_corpus': "Le Monde (1944-2023)"
+        'titre_corpus': "Le Monde (1944-2024)"
     }
 
 sidebar_header_style = """
