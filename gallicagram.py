@@ -8,7 +8,6 @@ from streamlit_javascript import st_javascript
 from user_agents import parse
 import html
 import requests.utils
-import pyperclip
 
 st.set_page_config(page_title="Gallicagram", page_icon="https://github.com/user-attachments/assets/6011b645-fba6-4e16-9f39-d54add706fa2", layout="wide", menu_items=None)
 
@@ -76,8 +75,8 @@ def generate_share_url():
     return f"https://gallicagram.streamlit.app/?state={base_url}"
 def share_url():
     share_url = generate_share_url()
-    pyperclip.copy(share_url)
-    st.success("URL copiée dans le presse-papiers !")
+    st.text_input("URL de partage :", value=share_url, key="share_url_input")
+    st.info("Copiez l'URL ci-dessus pour la partager.")
 
 # Mapping des titres de corpus vers leurs codes API
 corpus_mapping = {
