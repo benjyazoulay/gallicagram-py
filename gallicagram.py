@@ -67,15 +67,14 @@ st.session_state.is_mobile = is_mobile
 
 # Fonction pour lire les cookies en Python
 def get_is_mobile_from_cookie():
-    cookies = st.experimental_get_query_params()
-    return cookies.get('is_mobile', ['false'])[0] == 'true'
+    return st.query_params.get('is_mobile', ['false'])[0] == 'true'
 
 # Lire si c'est mobile à partir du cookie
 is_mobile = get_is_mobile_from_cookie()
 
 
 def generate_share_url():
-    base_url = st.experimental_get_query_params().get('state', [''])[0]
+    base_url = st.query_params.get('state', [''])[0]
     return f"https://gallicagram.streamlit.app/?state={base_url}"
 def share_url():
     share_url = generate_share_url()
@@ -122,9 +121,9 @@ default_state = {
     'titre_corpus': "Le Monde (1944-2024)"
 }
 
-# Vérifier s'il y a un état dans l'URL
-if 'state' in st.experimental_get_query_params():
-    state = decode_state(st.experimental_get_query_params()['state'][0])
+# Vérifiez s'il y a un état dans l'URL
+if 'state' in st.query_params:
+    state = decode_state(st.query_params.state)  # Pas besoin du [0] car il ne s'agit pas d'une liste
 else:
     state = default_state.copy()
 
@@ -197,7 +196,11 @@ current_state = {
     'resolution': resolution,
     'titre_corpus': titre_corpus
 }
-st.experimental_set_query_params(state=encode_state(current_state))
+# Encodez l'état courant
+encoded_state = encode_state(current_state)
+
+# Remplacez l'appel à `st.experimental_set_query_params`
+st.query_params.state = encoded_state
 
 # Obtenir le code API correspondant au corpus sélectionné
 corpus = corpus_mapping[titre_corpus]
@@ -330,7 +333,7 @@ if is_default_params() and not st.session_state.search_performed:
 col1, col2 = st.sidebar.columns(2)
 
 with col1:
-    if st.button("🔎Rechercher") or not st.session_state.search_performed:
+    if (st.button("🔎Rechercher") or not st.session_state.search_performed) and not is_default_params():
         st.session_state.search_count += 1
         lancer_recherche()
         st.session_state.search_performed = True
