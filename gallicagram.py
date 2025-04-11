@@ -259,6 +259,8 @@ if 'graph_data' not in st.session_state:
     st.session_state.graph_data = None
 if 'last_search_params' not in st.session_state:
     st.session_state.last_search_params = None
+if 'search_performed' not in st.session_state: # Initialize search_performed
+    st.session_state.search_performed = False
 
 # Modifiez la fonction lancer_recherche pour stocker les données dans l'état de session
 def lancer_recherche():
@@ -270,83 +272,153 @@ def lancer_recherche():
                 termes = [terme.strip() for terme in groupe.split('+')]
                 donnees_sommees = None
                 for terme in termes:
-                    donnees = obtenir_donnees_gallicagram(terme, annee_debut, annee_fin, resolution.lower(), corpus)
-                    if donnees is not None:
-                        donnees['ratio'] = donnees['n'] / donnees['total']
-                        if donnees_sommees is None:
-                            donnees_sommees = donnees[['date', 'ratio']].copy()
+                    # Use a temporary variable to avoid modifying the loop variable
+                    current_term = terme
+                    donnees = obtenir_donnees_gallicagram(current_term, annee_debut, annee_fin, resolution.lower(), corpus)
+                    if donnees is not None and not donnees.empty: # Check if data is valid and not empty
+                        # Ensure required columns exist before calculation
+                        if 'n' in donnees.columns and 'total' in donnees.columns:
+                            donnees['ratio'] = donnees['n'] / donnees['total']
+                            if donnees_sommees is None:
+                                # Ensure 'date' and 'ratio' columns exist before copying
+                                if 'date' in donnees.columns and 'ratio' in donnees.columns:
+                                    donnees_sommees = donnees[['date', 'ratio']].copy()
+                                else:
+                                     st.warning(f"Colonnes 'date' ou 'ratio' manquantes pour le terme '{current_term}'.")
+                                     continue # Skip this term if essential columns are missing
+                            else:
+                                # Align dataframes on 'date' before adding ratios
+                                # Make sure both dataframes have 'date' and 'ratio'
+                                if 'date' in donnees.columns and 'ratio' in donnees.columns and \
+                                   'date' in donnees_sommees.columns and 'ratio' in donnees_sommees.columns:
+
+                                    merged = pd.merge(donnees_sommees, donnees[['date', 'ratio']], on='date', how='outer', suffixes=('_left', '_right'))
+                                    merged['ratio'] = merged['ratio_left'].fillna(0) + merged['ratio_right'].fillna(0)
+                                    donnees_sommees = merged[['date', 'ratio']]
+                                else:
+                                     st.warning(f"Impossible de fusionner les données pour le terme '{current_term}' en raison de colonnes manquantes.")
                         else:
-                            donnees_sommees['ratio'] += donnees['ratio']
+                           st.warning(f"Colonnes 'n' ou 'total' manquantes pour le terme '{current_term}'.")
 
                 if donnees_sommees is not None:
-                    donnees_sommees['terme'] = '+'.join(termes)
+                    donnees_sommees['terme'] = groupe # Use the group name (e.g., 'guerre+paix') instead of individual terms
                     data_frames.append(donnees_sommees)
 
             if data_frames:
                 toutes_donnees = pd.concat(data_frames)
-                st.session_state.graph_data = toutes_donnees
-                st.session_state.last_search_params = {
-                    'termes_recherche': termes_recherche,
-                    'annee_debut': annee_debut,
-                    'annee_fin': annee_fin,
-                    'resolution': resolution,
-                    'titre_corpus': titre_corpus
-                }
+                # Ensure final dataframe has required columns before assigning
+                if 'date' in toutes_donnees.columns and 'ratio' in toutes_donnees.columns and 'terme' in toutes_donnees.columns:
+                   st.session_state.graph_data = toutes_donnees
+                   st.session_state.last_search_params = {
+                       'termes_recherche': termes_recherche,
+                       'annee_debut': annee_debut,
+                       'annee_fin': annee_fin,
+                       'resolution': resolution,
+                       'titre_corpus': titre_corpus
+                   }
+                   st.session_state.search_performed = True # Mark that a search was done
+                else:
+                   st.error("Les données finales générées sont incomplètes.")
+                   st.session_state.graph_data = None # Clear potentially bad data
+
             else:
                 st.error("Aucune donnée disponible pour les termes recherchés.")
+                st.session_state.graph_data = None # Clear graph data if search failed
 
 # Fonction pour afficher le graphique
 def afficher_graphique():
-    if st.session_state.graph_data is not None:
-        fig = px.line(st.session_state.graph_data, x='date', y='ratio', color='terme', line_shape='spline',
-              labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'},
-              color_discrete_sequence=px.colors.qualitative.Set1)
-        
-        if st.session_state.is_mobile:
-            fig.update_layout(
-                xaxis_title=None,
-                yaxis_title=None,
-                legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
-                margin=dict(l=0, r=0, t=0, b=60)
-            )
-        else:
-            fig.update_layout(
-                legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
-                margin=dict(l=0, r=0, t=0, b=40)
-            )
+    # Check if graph_data exists, is a DataFrame, and is not empty
+    if isinstance(st.session_state.get('graph_data'), pd.DataFrame) and not st.session_state.graph_data.empty:
+        try:
+            # Ensure required columns exist before plotting
+            if {'date', 'ratio', 'terme'}.issubset(st.session_state.graph_data.columns):
+                fig = px.line(st.session_state.graph_data, x='date', y='ratio', color='terme', line_shape='spline',
+                      labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'},
+                      color_discrete_sequence=px.colors.qualitative.Set1)
 
-        plot_container.plotly_chart(fig, use_container_width=True)
+                # Use st.session_state.is_mobile which should be set earlier
+                is_mobile_display = st.session_state.get('is_mobile', False)
 
-# Logique principale
-if 'search_performed' not in st.session_state:
-    st.session_state.search_performed = False
+                if is_mobile_display:
+                    fig.update_layout(
+                        xaxis_title=None,
+                        yaxis_title=None,
+                        legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
+                        margin=dict(l=0, r=0, t=0, b=60)
+                    )
+                else:
+                    fig.update_layout(
+                        legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
+                        margin=dict(l=0, r=0, t=0, b=40)
+                    )
 
+                # Use the placeholder to draw the chart
+                plot_container.plotly_chart(fig, use_container_width=True)
+            else:
+                plot_container.warning("Les données à afficher sont incomplètes (colonnes manquantes).")
+        except Exception as e:
+            plot_container.error(f"Erreur lors de la création du graphique : {e}")
+            st.error(f"Données en erreur:\n{st.session_state.graph_data.head()}") # Show head of data causing error
+    # else:
+         # Optional: Clear the placeholder if no data or invalid data
+         # plot_container.empty() # Clears previous content if any
+
+# --- Main Logic ---
+
+# Check for default params and load offline data if needed (ONLY load, don't display yet)
 if is_default_params() and not st.session_state.search_performed:
-    # Charger et afficher les données hors ligne si les paramètres sont par défaut
+    # Charger les données hors ligne si les paramètres sont par défaut ET qu'aucune recherche n'a été effectuée
     if os.path.exists('guerre.csv') and os.path.exists('paix.csv'):
         offline_data = load_offline_data(annee_debut, annee_fin, resolution)
-        st.session_state.graph_data = offline_data
-        afficher_graphique()
+        # Check if offline_data is valid before assigning
+        if isinstance(offline_data, pd.DataFrame) and not offline_data.empty:
+            st.session_state.graph_data = offline_data
+        else:
+            st.warning("Les données hors ligne n'ont pas pu être chargées correctement.")
+            st.session_state.graph_data = None # Ensure graph_data is None if loading failed
     else:
-        st.warning("Fichiers de données hors ligne non trouvés. Utilisez le bouton 'Rechercher' pour obtenir les données en ligne.")
+        # Don't display a warning here if the intent is to run a search on first load
+        # Let the lancer_recherche handle API calls if needed.
+        # If you *want* a warning when files are missing on default load:
+        st.sidebar.warning("Fichiers par défaut (guerre.csv, paix.csv) non trouvés.")
+        st.session_state.graph_data = None # Ensure graph_data is None
 
+# Sidebar buttons
 col1, col2 = st.sidebar.columns(2)
 
 with col1:
-    if (st.button("🔎Rechercher") or not st.session_state.search_performed) and not is_default_params():
-        st.session_state.search_count += 1
-        lancer_recherche()
-        st.session_state.search_performed = True
+    # Trigger search if button clicked OR if it's the initial load with default params
+    # and offline files were missing/failed to load (graph_data is None)
+    # or if params are NOT default.
+    trigger_search = st.button("🔎Rechercher", key="search_button_main")
+    initial_load_needs_search = (is_default_params() and not st.session_state.search_performed and st.session_state.graph_data is None)
+
+    if trigger_search or initial_load_needs_search or (not is_default_params() and not st.session_state.search_performed):
+         # Prevent running search again if button was clicked but params haven't changed since last search
+         current_params_for_check = {
+            'termes_recherche': termes_recherche, 'annee_debut': annee_debut,
+            'annee_fin': annee_fin, 'resolution': resolution, 'titre_corpus': titre_corpus
+         }
+         # Only run if button clicked OR if params changed OR initial load needs it
+         if trigger_search or current_params_for_check != st.session_state.get('last_search_params') or initial_load_needs_search:
+             st.session_state.search_count += 1
+             lancer_recherche()
+             # Don't set search_performed here, set it inside lancer_recherche upon success
+
 
 with col2:
     if st.button("📤Partager", key="share_button"):
-        share_url()
+        share_url() # Assuming this function is defined elsewhere and works
 
-# Affichez toujours le graphique s'il existe des données
+# --- Display Area ---
+
+# Display the graph using the data in session state (loaded either by default or by search)
+# This call now happens only ONCE per run, at the end.
 afficher_graphique()
 
-# Ajoutez un avertissement si les paramètres ont changé depuis la dernière recherche
-if st.session_state.last_search_params:
+# Add a warning if the parameters in the sidebar have changed since the last *successful* search
+# Check if last_search_params exists (meaning a successful search happened)
+if st.session_state.get('last_search_params'):
     current_params = {
         'termes_recherche': termes_recherche,
         'annee_debut': annee_debut,
@@ -354,5 +426,6 @@ if st.session_state.last_search_params:
         'resolution': resolution,
         'titre_corpus': titre_corpus
     }
+    # Compare with the params of the *last displayed graph*
     if current_params != st.session_state.last_search_params:
-        st.warning("Cliquez sur 'Rechercher' pour mettre à jour le graphique.")
+        st.warning("Les paramètres ont changé. Cliquez sur 'Rechercher' pour mettre à jour le graphique.")
