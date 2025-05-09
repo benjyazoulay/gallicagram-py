@@ -6,7 +6,7 @@ import base64
 import json
 from streamlit_javascript import st_javascript
 from user_agents import parse
-import html
+import html # Not strictly needed in this snippet, but was in your original
 import requests.utils
 import os
 
@@ -21,6 +21,7 @@ hide_streamlit_style = """
 
     div[data-testid="stConnectionStatus"] {
     display: none !important;
+    }
     </style>
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -35,11 +36,12 @@ st.markdown("""
 
     /* Style spécifique pour les mobiles */
     @media only screen and (max-width: 600px) {
+        /* Pour toutes les images sur mobile (le logo devra outrepasser margin-top) */
         img {
             display: block;
             margin-left: auto;
             margin-right: auto;
-            margin-top: 0 !important;
+            margin-top: 0 !important; 
             padding-top: 0 !important;
         }
         .main .block-container {
@@ -67,18 +69,30 @@ st.session_state.is_mobile = is_mobile
 
 # Fonction pour lire les cookies en Python
 def get_is_mobile_from_cookie():
+    # Fallback to False if 'is_mobile' is not in query_params
     return st.query_params.get('is_mobile', ['false'])[0] == 'true'
 
-# Lire si c'est mobile à partir du cookie
-is_mobile = get_is_mobile_from_cookie()
+# Lire si c'est mobile à partir du cookie (ou fallback)
+# is_mobile = get_is_mobile_from_cookie() # This might be overridden by JS, prioritize session_state
+
+# Prioritize the JavaScript detection result if available
+if 'is_mobile' in st.session_state:
+    is_mobile = st.session_state.is_mobile
+else:
+    is_mobile = get_is_mobile_from_cookie() # Fallback if JS hasn't run or set the state
 
 
 def generate_share_url():
-    base_url = st.query_params.get('state', [''])[0]
-    return f"https://gallicagram.streamlit.app/?state={base_url}"
+    # Ensure 'state' is in query_params and not empty before accessing [0]
+    base_url_param = st.query_params.get('state')
+    if base_url_param:
+        base_url = base_url_param[0]
+        return f"https://gallicagram.streamlit.app/?state={base_url}"
+    return "https://gallicagram.streamlit.app/" # Fallback if no state
+
 def share_url():
-    share_url = generate_share_url()
-    st.code(share_url, language="python")
+    share_url_val = generate_share_url()
+    st.code(share_url_val, language="python") # Changed variable name to avoid conflict
 
 # Mapping des titres de corpus vers leurs codes API
 corpus_mapping = {
@@ -123,43 +137,70 @@ default_state = {
 
 # Vérifiez s'il y a un état dans l'URL
 if 'state' in st.query_params:
-    state = decode_state(st.query_params.state)  # Pas besoin du [0] car il ne s'agit pas d'une liste
+    # Access query_params directly as it's a dict-like object
+    state_param = st.query_params['state']
+    # Check if it's a list (it usually is) and take the first element
+    state_value = state_param[0] if isinstance(state_param, list) else state_param
+    try:
+        state = decode_state(state_value)
+    except Exception as e:
+        st.error(f"Erreur lors du décodage de l'état de l'URL: {e}. Utilisation de l'état par défaut.")
+        state = default_state.copy()
 else:
     state = default_state.copy()
 
 def load_offline_data(debut, fin, resolution):
-    guerre_df = pd.read_csv('guerre.csv')
-    paix_df = pd.read_csv('paix.csv')
-    
+    try:
+        guerre_df = pd.read_csv('guerre.csv')
+        paix_df = pd.read_csv('paix.csv')
+    except FileNotFoundError:
+        st.sidebar.warning("Fichiers de données hors ligne (guerre.csv, paix.csv) non trouvés.")
+        return pd.DataFrame() # Return empty DataFrame
+
     # Filtrer les données selon la plage de dates spécifiée
     guerre_df = guerre_df[(guerre_df['annee'] >= debut) & (guerre_df['annee'] <= fin)]
     paix_df = paix_df[(paix_df['annee'] >= debut) & (paix_df['annee'] <= fin)]
-    
+
+    if guerre_df.empty and paix_df.empty:
+        return pd.DataFrame()
+
     # Appliquer le même traitement que dans obtenir_donnees_gallicagram
     if resolution.lower() == 'année':
-        guerre_df = guerre_df.groupby('annee')[['n', 'total']].sum().reset_index()
-        paix_df = paix_df.groupby('annee')[['n', 'total']].sum().reset_index()
-        
-        guerre_df['ratio'] = guerre_df['n'] / guerre_df['total']
-        paix_df['ratio'] = paix_df['n'] / paix_df['total']
-        
-        guerre_df['date'] = pd.to_datetime(guerre_df['annee'].astype(str) + '-01-01')
-        paix_df['date'] = pd.to_datetime(paix_df['annee'].astype(str) + '-01-01')
+        if not guerre_df.empty:
+            guerre_df = guerre_df.groupby('annee')[['n', 'total']].sum().reset_index()
+            guerre_df['ratio'] = guerre_df['n'] / guerre_df['total']
+            guerre_df['date'] = pd.to_datetime(guerre_df['annee'].astype(str) + '-01-01')
+        if not paix_df.empty:
+            paix_df = paix_df.groupby('annee')[['n', 'total']].sum().reset_index()
+            paix_df['ratio'] = paix_df['n'] / paix_df['total']
+            paix_df['date'] = pd.to_datetime(paix_df['annee'].astype(str) + '-01-01')
+
     elif resolution.lower() == 'mois':
-        guerre_df['mois'] = guerre_df['mois'].astype(int).apply(lambda x: f'{x:02}')
-        paix_df['mois'] = paix_df['mois'].astype(int).apply(lambda x: f'{x:02}')
-        
-        guerre_df['date'] = pd.to_datetime(guerre_df['annee'].astype(str) + '-' + guerre_df['mois'] + '-01', format='%Y-%m-%d')
-        paix_df['date'] = pd.to_datetime(paix_df['annee'].astype(str) + '-' + paix_df['mois'] + '-01', format='%Y-%m-%d')
-        
-        guerre_df['ratio'] = guerre_df['n'] / guerre_df['total']
-        paix_df['ratio'] = paix_df['n'] / paix_df['total']
+        if not guerre_df.empty:
+            guerre_df['mois'] = guerre_df['mois'].astype(int).apply(lambda x: f'{x:02}')
+            guerre_df = guerre_df.groupby(['annee', 'mois'])[['n', 'total']].sum().reset_index() # Added groupby for month
+            guerre_df['ratio'] = guerre_df['n'] / guerre_df['total']
+            guerre_df['date'] = pd.to_datetime(guerre_df['annee'].astype(str) + '-' + guerre_df['mois'] + '-01', format='%Y-%m-%d')
+        if not paix_df.empty:
+            paix_df['mois'] = paix_df['mois'].astype(int).apply(lambda x: f'{x:02}')
+            paix_df = paix_df.groupby(['annee', 'mois'])[['n', 'total']].sum().reset_index() # Added groupby for month
+            paix_df['ratio'] = paix_df['n'] / paix_df['total']
+            paix_df['date'] = pd.to_datetime(paix_df['annee'].astype(str) + '-' + paix_df['mois'] + '-01', format='%Y-%m-%d')
+
+    if not guerre_df.empty: guerre_df['terme'] = 'guerre'
+    if not paix_df.empty: paix_df['terme'] = 'paix'
+
+    # Concatenate, handling cases where one df might be empty
+    dfs_to_concat = []
+    if not guerre_df.empty: dfs_to_concat.append(guerre_df)
+    if not paix_df.empty: dfs_to_concat.append(paix_df)
     
-    guerre_df['terme'] = 'guerre'
-    paix_df['terme'] = 'paix'
-    
-    all_data = pd.concat([guerre_df, paix_df])
+    if not dfs_to_concat:
+        return pd.DataFrame()
+        
+    all_data = pd.concat(dfs_to_concat)
     return all_data[['date', 'ratio', 'terme']]
+
 
 # Vérifier si les paramètres actuels correspondent aux paramètres par défaut
 def is_default_params():
@@ -172,8 +213,8 @@ def is_default_params():
 sidebar_header_style = """
         <style>
         [data-testid="stSidebarHeader"] {
-            padding: 10px !important; /* Réduire le padding à zéro */
-            margin-bottom: -20px !important; /* Ajuster la marge en bas pour réduire la hauteur */
+            padding: 10px !important; /* Réduire le padding */
+            margin-bottom: -20px !important; /* Ajuster la marge en bas */
         }
         </style>
         """
@@ -182,9 +223,9 @@ st.markdown(sidebar_header_style, unsafe_allow_html=True)
 termes_recherche = st.sidebar.text_area("Termes de recherche", value=state['termes_recherche'])
 col1, col2 = st.sidebar.columns(2)
 with col1:
-    annee_debut = st.number_input("Début", min_value=1700, max_value=2024, value=state['annee_debut'])
+    annee_debut = st.number_input("Début", min_value=1600, max_value=2024, value=state['annee_debut'])
 with col2:
-    annee_fin = st.number_input("Fin", min_value=1700, max_value=2024, value=state['annee_fin'])
+    annee_fin = st.number_input("Fin", min_value=1600, max_value=2024, value=state['annee_fin'])
 resolution = st.sidebar.selectbox("Résolution", ["Année", "Mois"], index=["Année", "Mois"].index(state['resolution']))
 titre_corpus = st.sidebar.selectbox("Corpus", list(corpus_mapping.keys()), index=list(corpus_mapping.keys()).index(state['titre_corpus']))
 
@@ -196,234 +237,248 @@ current_state = {
     'resolution': resolution,
     'titre_corpus': titre_corpus
 }
-# Encodez l'état courant
 encoded_state = encode_state(current_state)
-
-# Remplacez l'appel à `st.experimental_set_query_params`
 st.query_params.state = encoded_state
 
-# Obtenir le code API correspondant au corpus sélectionné
 corpus = corpus_mapping[titre_corpus]
 
 # Fonction pour appeler l'API Gallicagram
-def obtenir_donnees_gallicagram(terme, debut, fin, resolution, corpus):
+def obtenir_donnees_gallicagram(terme, debut, fin, resolution_api, corpus_api): # Renamed params to avoid conflict
     terme_encode = requests.utils.quote(terme).lower()
-    url = f"https://shiny.ens-paris-saclay.fr/guni/query?mot={terme_encode}&corpus={corpus}&from={debut}&to={fin}"
-    if corpus == "query_persee" :
+    url = f"https://shiny.ens-paris-saclay.fr/guni/query?mot={terme_encode}&corpus={corpus_api}&from={debut}&to={fin}"
+    if corpus_api == "query_persee" : # Use corpus_api
         url = f"https://shiny.ens-paris-saclay.fr/guni/query_persee?mot={terme_encode}&from={debut}&to={fin}"
-    print(url)
-    response = requests.get(url)
-    if response.status_code == 200:
-        donnees = pd.read_csv(url)
-        if resolution.lower() == 'année':
+    # print(url) # Good for debugging, consider removing for production
+    try:
+        response = requests.get(url, timeout=30) # Added timeout
+        response.raise_for_status() # Will raise an HTTPError for bad responses (4XX or 5XX)
+        donnees = pd.read_csv(url) # pd.read_csv can also take a URL
+        if donnees.empty:
+            st.warning(f"Aucune donnée retournée par l'API pour le terme '{terme}'.")
+            return pd.DataFrame() # Return empty DataFrame
+
+        if resolution_api.lower() == 'année': # Use resolution_api
             donnees_annee = donnees.groupby('annee')[['n', 'total']].sum().reset_index()
             donnees_annee['ratio'] = donnees_annee['n'] / donnees_annee['total']
             donnees_annee['date'] = pd.to_datetime(donnees_annee['annee'].astype(str) + '-01-01')
             return donnees_annee
-        elif resolution.lower() == 'mois':
+        elif resolution_api.lower() == 'mois': # Use resolution_api
             donnees['mois'] = donnees['mois'].astype(int).apply(lambda x: f'{x:02}')
             donnees_mois = donnees.groupby(['annee','mois'])[['n', 'total']].sum().reset_index()
             donnees_mois['ratio'] = donnees_mois['n'] / donnees_mois['total']
             donnees_mois['date'] = pd.to_datetime(donnees_mois['annee'].astype(str) + '-' + donnees_mois['mois'] + '-01', format='%Y-%m-%d')
             return donnees_mois
-    else:
-        st.error("Erreur lors de la récupération des données depuis l'API")
-        return None
+        return pd.DataFrame() # Should not be reached if resolution is 'année' or 'mois'
+    except requests.exceptions.RequestException as e:
+        st.error(f"Erreur réseau ou API pour le terme '{terme}': {e}")
+        return pd.DataFrame() # Return empty DataFrame on error
+    except pd.errors.EmptyDataError:
+        st.warning(f"Aucune donnée (CSV vide) retournée par l'API pour le terme '{terme}'.")
+        return pd.DataFrame()
+    except KeyError as e:
+        st.error(f"Colonne manquante ({e}) dans les données de l'API pour '{terme}'.")
+        return pd.DataFrame()
+    except Exception as e: # Catch any other unexpected errors
+        st.error(f"Erreur inattendue lors du traitement des données pour '{terme}': {e}")
+        return pd.DataFrame()
+
+
 def get_base64_of_bin_file(bin_file):
-    with open(bin_file, 'rb') as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
+    try:
+        with open(bin_file, 'rb') as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+    except FileNotFoundError:
+        st.error(f"Fichier logo '{bin_file}' non trouvé.")
+        return None
 
 def get_img_with_href(local_img_path, target_url):
     img_format = os.path.splitext(local_img_path)[-1].replace('.', '')
     bin_str = get_base64_of_bin_file(local_img_path)
+    if bin_str is None: return "" # Return empty string if logo not found
+
+    # MODIFICATION ICI: Ajout de margin-top négatif avec !important
+    # Ajustez la valeur de -30px selon vos besoins.
+    # `!important` est utilisé pour s'assurer que cette règle outrepasse
+    # la règle `img { margin-top: 0 !important; }` de votre CSS mobile.
+    # `display: block; margin-left: auto; margin-right: auto;` sont ajoutés pour un centrage cohérent
+    # et pour s'assurer que `margin-top` fonctionne comme attendu pour un élément de type bloc.
     html_code = f'''
-        <a href="{target_url}" target="_self">
-            <img src="data:image/{img_format};base64,{bin_str}" alt="Gallicagram" style="width: 200px;"/>
+        <a href="{target_url}" target="_self" style="display: block; text-align: center;">
+            <img src="data:image/{img_format};base64,{bin_str}" 
+                 alt="Gallicagram" 
+                 style="width: 200px; margin-top: -35px !important; display: block; margin-left: auto; margin-right: auto;"/>
         </a>'''
     return html_code
 
 # Utilisation de la fonction
 logo_html = get_img_with_href('logo_gallicagram.png', 'https://gallicagram.com/')
-st.markdown(logo_html, unsafe_allow_html=True)
+if logo_html: # Only display if logo was loaded
+    st.markdown(logo_html, unsafe_allow_html=True)
 
 
 plot_container = st.empty()
 
-# Initialiser le compteur dans st.session_state
 if "search_count" not in st.session_state:
     st.session_state.search_count = 0
-
-# Ajoutez ces lignes pour initialiser l'état de session
 if 'graph_data' not in st.session_state:
     st.session_state.graph_data = None
 if 'last_search_params' not in st.session_state:
     st.session_state.last_search_params = None
-if 'search_performed' not in st.session_state: # Initialize search_performed
+if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# Modifiez la fonction lancer_recherche pour stocker les données dans l'état de session
 def lancer_recherche():
     with st.spinner('Recherche en cours...'):
-        termes_groupes = [groupe.strip() for groupe in termes_recherche.split(',')]
-        if termes_groupes:
-            data_frames = []
-            for groupe in termes_groupes:
-                termes = [terme.strip() for terme in groupe.split('+')]
-                donnees_sommees = None
-                for terme in termes:
-                    # Use a temporary variable to avoid modifying the loop variable
-                    current_term = terme
-                    donnees = obtenir_donnees_gallicagram(current_term, annee_debut, annee_fin, resolution.lower(), corpus)
-                    if donnees is not None and not donnees.empty: # Check if data is valid and not empty
-                        # Ensure required columns exist before calculation
-                        if 'n' in donnees.columns and 'total' in donnees.columns:
-                            donnees['ratio'] = donnees['n'] / donnees['total']
-                            if donnees_sommees is None:
-                                # Ensure 'date' and 'ratio' columns exist before copying
-                                if 'date' in donnees.columns and 'ratio' in donnees.columns:
-                                    donnees_sommees = donnees[['date', 'ratio']].copy()
-                                else:
-                                     st.warning(f"Colonnes 'date' ou 'ratio' manquantes pour le terme '{current_term}'.")
-                                     continue # Skip this term if essential columns are missing
-                            else:
-                                # Align dataframes on 'date' before adding ratios
-                                # Make sure both dataframes have 'date' and 'ratio'
-                                if 'date' in donnees.columns and 'ratio' in donnees.columns and \
-                                   'date' in donnees_sommees.columns and 'ratio' in donnees_sommees.columns:
+        termes_groupes = [groupe.strip() for groupe in termes_recherche.split(',') if groupe.strip()] # Added check for empty group
+        if not termes_groupes:
+            st.warning("Veuillez entrer au moins un terme de recherche.")
+            st.session_state.graph_data = pd.DataFrame() # Clear graph for empty search
+            st.session_state.search_performed = True # Mark search as performed (even if empty)
+            return
 
-                                    merged = pd.merge(donnees_sommees, donnees[['date', 'ratio']], on='date', how='outer', suffixes=('_left', '_right'))
-                                    merged['ratio'] = merged['ratio_left'].fillna(0) + merged['ratio_right'].fillna(0)
-                                    donnees_sommees = merged[['date', 'ratio']]
-                                else:
-                                     st.warning(f"Impossible de fusionner les données pour le terme '{current_term}' en raison de colonnes manquantes.")
-                        else:
-                           st.warning(f"Colonnes 'n' ou 'total' manquantes pour le terme '{current_term}'.")
+        data_frames = []
+        for groupe in termes_groupes:
+            termes = [terme.strip() for terme in groupe.split('+') if terme.strip()] # Added check for empty term
+            if not termes: continue # Skip empty groups like 'term1, , term2' or 'term1, ++, term2'
 
-                if donnees_sommees is not None:
-                    donnees_sommees['terme'] = groupe # Use the group name (e.g., 'guerre+paix') instead of individual terms
-                    data_frames.append(donnees_sommees)
+            donnees_sommees_groupe = None # Use a more descriptive name
 
-            if data_frames:
-                toutes_donnees = pd.concat(data_frames)
-                # Ensure final dataframe has required columns before assigning
-                if 'date' in toutes_donnees.columns and 'ratio' in toutes_donnees.columns and 'terme' in toutes_donnees.columns:
-                   st.session_state.graph_data = toutes_donnees
-                   st.session_state.last_search_params = {
-                       'termes_recherche': termes_recherche,
-                       'annee_debut': annee_debut,
-                       'annee_fin': annee_fin,
-                       'resolution': resolution,
-                       'titre_corpus': titre_corpus
-                   }
-                   st.session_state.search_performed = True # Mark that a search was done
-                else:
-                   st.error("Les données finales générées sont incomplètes.")
-                   st.session_state.graph_data = None # Clear potentially bad data
+            for terme_simple in termes: # Renamed 'terme' to 'terme_simple' to avoid conflict
+                donnees_terme = obtenir_donnees_gallicagram(terme_simple, annee_debut, annee_fin, resolution, corpus) # Pass correct resolution and corpus
 
+                if donnees_terme is not None and not donnees_terme.empty:
+                    if 'date' not in donnees_terme.columns or 'ratio' not in donnees_terme.columns:
+                        st.warning(f"Données incomplètes (colonnes 'date' ou 'ratio' manquantes) pour '{terme_simple}'. Il sera ignoré.")
+                        continue
+
+                    if donnees_sommees_groupe is None:
+                        donnees_sommees_groupe = donnees_terme[['date', 'ratio']].copy()
+                    else:
+                        # Outer merge to keep all dates, fill missing ratios with 0 before summing
+                        merged = pd.merge(donnees_sommees_groupe, donnees_terme[['date', 'ratio']], on='date', how='outer', suffixes=('_summed', '_new'))
+                        merged['ratio_summed'] = merged['ratio_summed'].fillna(0)
+                        merged['ratio_new'] = merged['ratio_new'].fillna(0)
+                        merged['ratio'] = merged['ratio_summed'] + merged['ratio_new']
+                        donnees_sommees_groupe = merged[['date', 'ratio']].copy()
+                # else: No specific warning here, `obtenir_donnees_gallicagram` already warns
+
+            if donnees_sommees_groupe is not None and not donnees_sommees_groupe.empty:
+                donnees_sommees_groupe['terme'] = groupe
+                data_frames.append(donnees_sommees_groupe)
+
+        if data_frames:
+            toutes_donnees = pd.concat(data_frames)
+            if 'date' in toutes_donnees.columns and 'ratio' in toutes_donnees.columns and 'terme' in toutes_donnees.columns:
+                st.session_state.graph_data = toutes_donnees
+                st.session_state.last_search_params = current_state.copy() # Use current_state
+                st.session_state.search_performed = True
             else:
-                st.error("Aucune donnée disponible pour les termes recherchés.")
-                st.session_state.graph_data = None # Clear graph data if search failed
+                st.error("Les données finales pour le graphique sont incomplètes.")
+                st.session_state.graph_data = pd.DataFrame() # Use empty DataFrame
+        else:
+            st.info("Aucune donnée trouvée pour les termes et paramètres spécifiés.")
+            st.session_state.graph_data = pd.DataFrame() # Use empty DataFrame
+            st.session_state.search_performed = True # Mark search as performed
 
-# Fonction pour afficher le graphique
+
 def afficher_graphique():
-    # Check if graph_data exists, is a DataFrame, and is not empty
     if isinstance(st.session_state.get('graph_data'), pd.DataFrame) and not st.session_state.graph_data.empty:
         try:
-            # Ensure required columns exist before plotting
-            if {'date', 'ratio', 'terme'}.issubset(st.session_state.graph_data.columns):
-                fig = px.line(st.session_state.graph_data, x='date', y='ratio', color='terme', line_shape='spline',
-                      labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme de recherche'},
-                      color_discrete_sequence=px.colors.qualitative.Set1)
+            if not {'date', 'ratio', 'terme'}.issubset(st.session_state.graph_data.columns):
+                plot_container.warning("Données graphiques incomplètes (colonnes manquantes).")
+                return
 
-                # Use st.session_state.is_mobile which should be set earlier
-                is_mobile_display = st.session_state.get('is_mobile', False)
+            fig = px.line(st.session_state.graph_data, x='date', y='ratio', color='terme', line_shape='spline',
+                          labels={'ratio': 'Fréquence', 'date': 'Date', 'terme': 'Terme(s)'}, # Changed label
+                          color_discrete_sequence=px.colors.qualitative.Set1)
 
-                if is_mobile_display:
-                    fig.update_layout(
-                        xaxis_title=None,
-                        yaxis_title=None,
-                        legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
-                        margin=dict(l=0, r=0, t=0, b=60)
-                    )
-                else:
-                    fig.update_layout(
-                        legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="left", x=0, title=None),
-                        margin=dict(l=0, r=0, t=0, b=40)
-                    )
+            is_mobile_display = st.session_state.get('is_mobile', False)
 
-                # Use the placeholder to draw the chart
-                plot_container.plotly_chart(fig, use_container_width=True)
+            if is_mobile_display:
+                fig.update_layout(
+                    xaxis_title=None,
+                    yaxis_title=None,
+                    legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5, title=None), # Centered legend
+                    margin=dict(l=10, r=10, t=20, b=60) # Adjusted margins
+                )
             else:
-                plot_container.warning("Les données à afficher sont incomplètes (colonnes manquantes).")
+                fig.update_layout(
+                    legend=dict(orientation="h", yanchor="bottom", y=-0.20, xanchor="center", x=0.5, title=None), # Centered legend
+                    margin=dict(l=20, r=20, t=20, b=40) # Adjusted margins
+                )
+            plot_container.plotly_chart(fig, use_container_width=True)
+
         except Exception as e:
             plot_container.error(f"Erreur lors de la création du graphique : {e}")
-            st.error(f"Données en erreur:\n{st.session_state.graph_data.head()}") # Show head of data causing error
+            # st.error(f"Données en erreur:\n{st.session_state.graph_data.head()}")
+    elif st.session_state.search_performed and (st.session_state.graph_data is None or st.session_state.graph_data.empty):
+        # If a search was done and resulted in no data, clear the plot area or show a message
+        plot_container.empty() # Clears previous chart
+        # Optionally, display a message in the plot_container if you want
+        # plot_container.info("Aucune donnée à afficher pour les paramètres actuels.")
     # else:
-         # Optional: Clear the placeholder if no data or invalid data
-         # plot_container.empty() # Clears previous content if any
+        # Initial load, or data cleared for other reasons.
+        # plot_container.empty() # Clears previous content
 
 # --- Main Logic ---
 
-# Check for default params and load offline data if needed (ONLY load, don't display yet)
+# Load offline data if default params and no search performed yet
 if is_default_params() and not st.session_state.search_performed:
-    # Charger les données hors ligne si les paramètres sont par défaut ET qu'aucune recherche n'a été effectuée
+    # Check if files exist using os.path.exists
     if os.path.exists('guerre.csv') and os.path.exists('paix.csv'):
         offline_data = load_offline_data(annee_debut, annee_fin, resolution)
-        # Check if offline_data is valid before assigning
         if isinstance(offline_data, pd.DataFrame) and not offline_data.empty:
             st.session_state.graph_data = offline_data
-        else:
-            st.warning("Les données hors ligne n'ont pas pu être chargées correctement.")
-            st.session_state.graph_data = None # Ensure graph_data is None if loading failed
+            # Don't set search_performed here, this is pre-search default display
+        # else:
+            # load_offline_data will show a warning if files not found or data is empty
+            # st.session_state.graph_data = pd.DataFrame() # Ensure it's an empty df
     else:
-        # Don't display a warning here if the intent is to run a search on first load
-        # Let the lancer_recherche handle API calls if needed.
-        # If you *want* a warning when files are missing on default load:
-        st.sidebar.warning("Fichiers par défaut (guerre.csv, paix.csv) non trouvés.")
-        st.session_state.graph_data = None # Ensure graph_data is None
+        # Files not found, load_offline_data will also show a warning if called,
+        # but we can add a specific one here if we don't call it.
+        # st.sidebar.warning("Fichiers par défaut (guerre.csv, paix.csv) non trouvés pour l'affichage initial.")
+        st.session_state.graph_data = pd.DataFrame() # Ensure it's an empty df
+
 
 # Sidebar buttons
-col1, col2 = st.sidebar.columns(2)
+sidebar_col1, sidebar_col2 = st.sidebar.columns(2) # Renamed to avoid conflict with other col1, col2
 
-with col1:
-    # Trigger search if button clicked OR if it's the initial load with default params
-    # and offline files were missing/failed to load (graph_data is None)
-    # or if params are NOT default.
-    trigger_search = st.button("🔎Rechercher", key="search_button_main")
-    initial_load_needs_search = (is_default_params() and not st.session_state.search_performed and st.session_state.graph_data is None)
+with sidebar_col1:
+    trigger_search = st.button("🔎Rechercher", key="search_button_main", use_container_width=True)
 
-    if trigger_search or initial_load_needs_search or (not is_default_params() and not st.session_state.search_performed):
-         # Prevent running search again if button was clicked but params haven't changed since last search
-         current_params_for_check = {
-            'termes_recherche': termes_recherche, 'annee_debut': annee_debut,
-            'annee_fin': annee_fin, 'resolution': resolution, 'titre_corpus': titre_corpus
-         }
-         # Only run if button clicked OR if params changed OR initial load needs it
-         if trigger_search or current_params_for_check != st.session_state.get('last_search_params') or initial_load_needs_search:
-             st.session_state.search_count += 1
-             lancer_recherche()
-             # Don't set search_performed here, set it inside lancer_recherche upon success
+# Logic to run search:
+# 1. If search button is clicked.
+# 2. On initial load IF NOT default params (meaning URL params were different from default).
+# 3. On initial load IF default params BUT offline data failed to load/was empty AND no search has been done yet.
+
+initial_load_trigger = False
+if not st.session_state.search_performed: # Only consider initial load triggers if no search has happened
+    if not is_default_params():
+        initial_load_trigger = True
+    elif is_default_params() and (st.session_state.graph_data is None or st.session_state.graph_data.empty):
+        # This case handles when default files are missing/empty and we want to trigger an API search
+        initial_load_trigger = True
 
 
-
+if trigger_search or initial_load_trigger:
+    # Check if params actually changed since last successful search OR if it's a fresh trigger
+    # This prevents re-searching if button is spammed without param changes AFTER a successful search.
+    # For initial_load_trigger, last_search_params would be None, so it always proceeds.
+    if trigger_search or st.session_state.last_search_params != current_state or initial_load_trigger:
+        st.session_state.search_count += 1
+        lancer_recherche()
+    # If trigger_search is true but params haven't changed from last_search_params,
+    # it implies the user clicked search again on the same data.
+    # We don't need to re-run lancer_recherche, afficher_graphique will handle it.
 
 # --- Display Area ---
-
-# Display the graph using the data in session state (loaded either by default or by search)
-# This call now happens only ONCE per run, at the end.
 afficher_graphique()
 
-# Add a warning if the parameters in the sidebar have changed since the last *successful* search
-# Check if last_search_params exists (meaning a successful search happened)
-if st.session_state.get('last_search_params'):
-    current_params = {
-        'termes_recherche': termes_recherche,
-        'annee_debut': annee_debut,
-        'annee_fin': annee_fin,
-        'resolution': resolution,
-        'titre_corpus': titre_corpus
-    }
-    # Compare with the params of the *last displayed graph*
-    if current_params != st.session_state.last_search_params:
-        st.warning("Les paramètres ont changé. Cliquez sur 'Rechercher' pour mettre à jour le graphique.")
+# Warning for changed parameters
+if st.session_state.get('last_search_params') and st.session_state.last_search_params != current_state:
+    st.warning("Les paramètres ont changé. Cliquez sur 'Rechercher' pour mettre à jour le graphique.")
+
+with sidebar_col2: # Use the other sidebar column
+    if st.button("Partager", key="share_button", use_container_width=True):
+        share_url() # Call your share_url function
