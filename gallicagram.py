@@ -92,27 +92,39 @@ def generate_share_url():
 def display_share_interface():
     share_url_value = generate_share_url()
     
+    # Ce conteneur est optionnel mais peut aider à regrouper la sortie
+    # Surtout si vous voulez l'effacer plus tard.
+    # Pour l'instant, nous allons écrire directement dans la sidebar.
+    # share_container = st.sidebar.container() # Ou st.container() si ailleurs
+
+    # Avec st.sidebar.container() ou st.container(), utiliser share_container.write, .code, .markdown
+    # Sinon, utiliser st.write, st.code, st.markdown directement (pour affichage direct dans la sidebar)
+
     st.write("Lien de partage :")
     st.code(share_url_value, language="text")
 
-    # Générer des ID uniques pour éviter les conflits si le bouton est recréé
     button_id = f"copy_button_{int(time.time() * 1000)}"
     status_id = f"copy_status_{int(time.time() * 1000)}"
+    escaped_url_for_js = json.dumps(share_url_value) # Correctement échappe l'URL pour JS
 
-    # html.escape est crucial pour la sécurité si share_url_value pouvait contenir des caractères spéciaux HTML
-    # json.dumps est utilisé pour s'assurer que l'URL est correctement formatée comme une chaîne JavaScript
-    escaped_url_for_js = json.dumps(share_url_value)
-
-    copy_js = f"""
-        <button id="{button_id}" style="padding: 0.25em 0.5em; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc; background-color: #f0f0f0;">
+    # 1. Afficher le HTML visible (bouton et span)
+    visible_html = f"""
+        <button id="{button_id}" style="padding: 0.25em 0.5em; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc; background-color: #f0f0f0; cursor: pointer;">
             Copier dans le presse-papiers
         </button>
         <span id="{status_id}" style="margin-left: 10px; font-size: 0.9em;"></span>
+    """
+    st.markdown(visible_html, unsafe_allow_html=True)
+
+    # 2. Injecter le script JavaScript séparément
+    # Le script trouvera les éléments par ID car ils sont déjà dans le DOM
+    script_js = f"""
         <script>
             (function() {{ // IIFE pour éviter de polluer le scope global
                 var copyButton = document.getElementById('{button_id}');
                 var copyStatus = document.getElementById('{status_id}');
-                if (copyButton) {{
+                
+                if (copyButton && copyStatus) {{
                     copyButton.addEventListener('click', function() {{
                         navigator.clipboard.writeText({escaped_url_for_js}).then(function() {{
                             copyStatus.textContent = 'Copié !';
@@ -121,10 +133,15 @@ def display_share_interface():
                         }}, function(err) {{
                             copyStatus.textContent = 'Échec copie';
                             copyStatus.style.color = 'red';
-                            console.error('Erreur de copie: ', err);
+                            console.error('Erreur de copie dans le presse-papiers: ', err);
+                            // Afficher une alerte peut être utile si la console n'est pas visible
+                            // alert('Erreur de copie. Assurez-vous que la page a le focus et que vous utilisez HTTPS.');
                             setTimeout(function() {{ copyStatus.textContent = ''; }}, 3000);
                         }});
                     }});
+                }} else {{
+                    if (!copyButton) console.error("Bouton de copie non trouvé : {button_id}");
+                    if (!copyStatus) console.error("Élément de statut de copie non trouvé : {status_id}");
                 }}
             }})();
         </script>
