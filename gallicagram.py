@@ -479,6 +479,3 @@ afficher_graphique()
 if st.session_state.get('last_search_params') and st.session_state.last_search_params != current_state:
     st.warning("Les paramètres ont changé. Cliquez sur 'Rechercher' pour mettre à jour le graphique.")
 
-with sidebar_col2: # Use the other sidebar column
-    if st.button("Partager", key="share_button", use_container_width=True):
-        share_url() # Call your share_url function
