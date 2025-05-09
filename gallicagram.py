@@ -406,9 +406,7 @@ with col1:
              # Don't set search_performed here, set it inside lancer_recherche upon success
 
 
-with col2:
-    if st.button("📤Partager", key="share_button"):
-        share_url() # Assuming this function is defined elsewhere and works
+
 
 # --- Display Area ---
 
