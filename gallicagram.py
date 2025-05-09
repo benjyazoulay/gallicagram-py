@@ -307,7 +307,7 @@ def get_img_with_href(local_img_path, target_url):
         <a href="{target_url}" target="_self" style="display: block; text-align: center;">
             <img src="data:image/{img_format};base64,{bin_str}" 
                  alt="Gallicagram" 
-                 style="width: 200px; margin-top: -35px !important; display: block; margin-left: auto; margin-right: auto;"/>
+                 style="width: 200px; margin-top: -70px !important; display: block; margin-left: auto; margin-right: auto;"/>
         </a>'''
     return html_code
 
